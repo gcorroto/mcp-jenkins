@@ -13,6 +13,13 @@ MCP server para integración con Jenkins CI/CD. Este servidor permite interactua
 
 ## Instalación
 
+### Opción 1: Usar con npx (Recomendado)
+```bash
+# No requiere instalación global
+npx @grec0/mcp-jenkins
+```
+
+### Opción 2: Instalación global
 ```bash
 npm install -g @grec0/mcp-jenkins
 ```
@@ -47,6 +54,24 @@ export JENKINS_PASSWORD="tu-token-o-password"
 
 Agregar al archivo de configuración de Claude Desktop:
 
+#### Opción 1: Con npx (Recomendado)
+```json
+{
+  "mcpServers": {
+    "jenkins": {
+      "command": "npx",
+      "args": ["@grec0/mcp-jenkins"],
+      "env": {
+        "JENKINS_URL": "https://tu-jenkins.com",
+        "JENKINS_USERNAME": "tu-usuario", 
+        "JENKINS_PASSWORD": "tu-token"
+      }
+    }
+  }
+}
+```
+
+#### Opción 2: Con instalación global
 ```json
 {
   "mcpServers": {
@@ -114,6 +139,33 @@ Obtén las acciones pendientes del build #456 de "mi-app" y luego aprueba el dep
 - **Eliminación del parámetro `area`**: Solo se usa `app` para simplificar
 - **Estructura de jobs simplificada**: `/job/app-{app}-pipeline` en lugar de `/job/{area}/job/app{area}-{app}-pipeline`
 - **Configuración por variables de entorno**: Más simple que la configuración de Spring Boot
+
+## Ejecución Manual
+
+### Con npx:
+```bash
+# Configurar variables de entorno
+export JENKINS_URL="https://tu-jenkins.com"
+export JENKINS_USERNAME="tu-usuario"
+export JENKINS_PASSWORD="tu-token"
+
+# Ejecutar
+npx @grec0/mcp-jenkins
+```
+
+### Con instalación global:
+```bash
+# Instalar globalmente
+npm install -g @grec0/mcp-jenkins
+
+# Configurar variables de entorno
+export JENKINS_URL="https://tu-jenkins.com"
+export JENKINS_USERNAME="tu-usuario"
+export JENKINS_PASSWORD="tu-token"
+
+# Ejecutar
+mcp-jenkins
+```
 
 ## Desarrollo
 
