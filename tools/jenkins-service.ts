@@ -54,9 +54,9 @@ export class JenkinsService {
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 404) {
-        throw new JenkinsError(`Job not found for app: ${app}`);
+        throw new JenkinsError(`Job not found for app: ${app} and url: ${jobUrl}`);
       }
-      throw handleHttpError(error, `Failed to get job status for app: ${app}`);
+      throw handleHttpError(error, `Failed to get job status for app: ${app} and url: ${jobUrl}`);
     }
   }
 
