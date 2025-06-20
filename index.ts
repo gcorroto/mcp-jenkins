@@ -17,14 +17,18 @@ const server = new McpServer({
   version: VERSION,
 });
 
-// Create Jenkins service instance
-let jenkinsService: JenkinsService;
+// Create Jenkins service instance (lazy initialization)
+let jenkinsService: JenkinsService | null = null;
 
-try {
-  jenkinsService = new JenkinsService();
-} catch (error: any) {
-  console.error("Failed to initialize Jenkins service:", error.message);
-  process.exit(1);
+function getJenkinsService(): JenkinsService {
+  if (!jenkinsService) {
+    try {
+      jenkinsService = new JenkinsService();
+    } catch (error: any) {
+      throw new Error(`Jenkins configuration error: ${error.message}`);
+    }
+  }
+  return jenkinsService;
 }
 
 // ----- HERRAMIENTAS MCP PARA JENKINS CI/CD -----
@@ -38,7 +42,7 @@ server.tool(
   },
   async (args) => {
     try {
-      const result = await jenkinsService.getJobStatus(args.app);
+      const result = await getJenkinsService().getJobStatus(args.app);
       
       const lastBuild = result.lastBuild;
       const statusText = `🔧 **Estado del Job: ${result.displayName}**\n\n` +
@@ -74,7 +78,7 @@ server.tool(
   },
   async (args) => {
     try {
-      const result = await jenkinsService.startJob(args.app, args.branch);
+      const result = await getJenkinsService().startJob(args.app, args.branch);
       
       return {
         content: [{ type: "text", text: `🚀 **${result}**` }],
@@ -97,7 +101,7 @@ server.tool(
   },
   async (args) => {
     try {
-      const result = await jenkinsService.stopJob(args.app, args.buildNumber);
+      const result = await getJenkinsService().stopJob(args.app, args.buildNumber);
       
       return {
         content: [{ type: "text", text: `🛑 **${result}**` }],
@@ -120,7 +124,7 @@ server.tool(
   },
   async (args) => {
     try {
-      const result = await jenkinsService.getJobStepsStatus(args.app, args.buildNumber);
+      const result = await getJenkinsService().getJobStepsStatus(args.app, args.buildNumber);
       
       const stepsText = `📋 **Steps del Build #${args.buildNumber} - ${args.app}**\n\n` +
         `**ID:** ${result.id}\n` +
@@ -155,7 +159,7 @@ server.tool(
   },
   async (args) => {
     try {
-      const result = await jenkinsService.getNodeStatus(args.app, args.buildNumber, args.nodeId);
+      const result = await getJenkinsService().getNodeStatus(args.app, args.buildNumber, args.nodeId);
       
       let statusText: string;
       
@@ -196,7 +200,7 @@ server.tool(
   },
   async (args) => {
     try {
-      const result = await jenkinsService.getPendingInputActions(args.app, args.buildNumber);
+      const result = await getJenkinsService().getPendingInputActions(args.app, args.buildNumber);
       
       const actionsText = `⏳ **Acciones Pendientes - Build #${args.buildNumber}**\n\n` +
         `**ID:** ${result.id}\n` +
@@ -228,7 +232,7 @@ server.tool(
   },
   async (args) => {
     try {
-      const result = await jenkinsService.submitInputAction(args.decisionUrl);
+      const result = await getJenkinsService().submitInputAction(args.decisionUrl);
       
       return {
         content: [{ type: "text", text: `✅ **${result}**` }],
@@ -253,7 +257,7 @@ server.tool(
   },
   async (args) => {
     try {
-      const result = await jenkinsService.getCoverageReport(
+      const result = await getJenkinsService().getCoverageReport(
         args.app, 
         args.buildNumber, 
         args.packageName, 
@@ -262,7 +266,7 @@ server.tool(
       
       let coverageText: string;
       
-             if ('instructionCoverage' in result) {
+      if ('instructionCoverage' in result) {
          // Es un CoverageReport (backend)
          coverageText = `📊 **Reporte de Cobertura - Build #${args.buildNumber}**\n\n` +
            `**Instrucciones:** ${result.instructionCoverage?.percentage || 0}% (${result.instructionCoverage?.covered || 0}/${result.instructionCoverage?.total || 0})\n` +
@@ -303,7 +307,7 @@ server.tool(
   },
   async (args) => {
     try {
-      const result = await jenkinsService.getCoverageReportLines(args.app, args.buildNumber, args.path);
+      const result = await getJenkinsService().getCoverageReportLines(args.app, args.buildNumber, args.path);
       
       const linesText = `📄 **Cobertura de Archivo: ${args.path}**\n\n` +
         `**Declaraciones:** ${Object.keys(result.statementMap).length}\n` +
@@ -333,7 +337,7 @@ server.tool(
   },
   async (args) => {
     try {
-      const result = await jenkinsService.getCoverageReportPaths(args.app, args.buildNumber);
+      const result = await getJenkinsService().getCoverageReportPaths(args.app, args.buildNumber);
       
       const pathsText = `📂 **Paths de Cobertura - Build #${args.buildNumber}**\n\n` +
         `**Total de archivos:** ${result.length}\n\n` +
@@ -360,7 +364,7 @@ server.tool(
   },
   async (args) => {
     try {
-      const result = await jenkinsService.getGitBranches(args.app);
+      const result = await getJenkinsService().getGitBranches(args.app);
       
       const branchesText = `🌿 **Ramas de Git Disponibles - ${args.app}**\n\n` +
         `**Total de ramas:** ${result.length}\n\n` +
