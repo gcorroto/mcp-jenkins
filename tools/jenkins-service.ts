@@ -262,7 +262,7 @@ export class JenkinsService {
     }
 
     // Para obtener branches, usamos el job principal sin branch específico
-    const url = `${this.config.url}/jenkins/job/${app}/descriptorByName/net.uaznia.lukanus.hudson.plugins.gitparameter.GitParameterDefinition/fillValueItems?param=BRANCH_TO_BUILD`;
+    const url = `${buildJobUrl('', app, 'main')}/descriptorByName/net.uaznia.lukanus.hudson.plugins.gitparameter.GitParameterDefinition/fillValueItems?param=BRANCH_TO_BUILD`;
     
     try {
       const response: AxiosResponse<{ values: GitBranch[] }> = await this.client.get(url);

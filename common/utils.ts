@@ -55,7 +55,12 @@ export function createHttpsAgent() {
  * Formato: /job/{app}/job/{branch}
  */
 export function buildJobUrl(baseUrl: string, app: string, branch: string = 'main'): string {
-  return `${baseUrl}/jenkins/job/${app}/job/${branch}`;
+  // Si no hay baseUrl, solo devolver la ruta relativa
+  if (!baseUrl) {
+    return `/job/${app}/job/${branch}`;
+  }
+  // Si hay baseUrl, construir URL completa
+  return `${baseUrl}/job/${app}/job/${branch}`;
 }
 
 /**
