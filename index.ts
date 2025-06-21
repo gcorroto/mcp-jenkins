@@ -38,11 +38,12 @@ server.tool(
   "jenkins_get_job_status",
   "Obtener el estado de un job específico de Jenkins",
   {
-    app: z.string().describe("Nombre de la aplicación")
+    app: z.string().describe("Nombre de la aplicación"),
+    branch: z.string().optional().describe("Rama de Git (por defecto: main)")
   },
   async (args) => {
     try {
-      const result = await getJenkinsService().getJobStatus(args.app);
+      const result = await getJenkinsService().getJobStatus(args.app, args.branch || 'main');
       
       const lastBuild = result.lastBuild;
       const statusText = `🔧 **Estado del Job: ${result.displayName}**\n\n` +
@@ -97,11 +98,12 @@ server.tool(
   "Detener un job de Jenkins en ejecución",
   {
     app: z.string().describe("Nombre de la aplicación"),
-    buildNumber: z.number().describe("Número del build a detener")
+    buildNumber: z.number().describe("Número del build a detener"),
+    branch: z.string().optional().describe("Rama de Git (por defecto: main)")
   },
   async (args) => {
     try {
-      const result = await getJenkinsService().stopJob(args.app, args.buildNumber);
+      const result = await getJenkinsService().stopJob(args.app, args.buildNumber, args.branch || 'main');
       
       return {
         content: [{ type: "text", text: `🛑 **${result}**` }],
@@ -120,11 +122,12 @@ server.tool(
   "Obtener el estado de los steps de un build específico",
   {
     app: z.string().describe("Nombre de la aplicación"),
-    buildNumber: z.number().describe("Número del build")
+    buildNumber: z.number().describe("Número del build"),
+    branch: z.string().optional().describe("Rama de Git (por defecto: main)")
   },
   async (args) => {
     try {
-      const result = await getJenkinsService().getJobStepsStatus(args.app, args.buildNumber);
+      const result = await getJenkinsService().getJobStepsStatus(args.app, args.buildNumber, args.branch || 'main');
       
       const stepsText = `📋 **Steps del Build #${args.buildNumber} - ${args.app}**\n\n` +
         `**ID:** ${result.id}\n` +
@@ -155,11 +158,12 @@ server.tool(
   {
     app: z.string().describe("Nombre de la aplicación"),
     buildNumber: z.number().describe("Número del build"),
-    nodeId: z.string().describe("ID del nodo")
+    nodeId: z.string().describe("ID del nodo"),
+    branch: z.string().optional().describe("Rama de Git (por defecto: main)")
   },
   async (args) => {
     try {
-      const result = await getJenkinsService().getNodeStatus(args.app, args.buildNumber, args.nodeId);
+      const result = await getJenkinsService().getNodeStatus(args.app, args.buildNumber, args.nodeId, args.branch || 'main');
       
       let statusText: string;
       
@@ -196,24 +200,24 @@ server.tool(
   "Obtener las acciones pendientes de input de un build",
   {
     app: z.string().describe("Nombre de la aplicación"),
-    buildNumber: z.number().describe("Número del build")
+    buildNumber: z.number().describe("Número del build"),
+    branch: z.string().optional().describe("Rama de Git (por defecto: main)")
   },
   async (args) => {
     try {
-      const result = await getJenkinsService().getPendingInputActions(args.app, args.buildNumber);
+      const result = await getJenkinsService().getPendingInputActions(args.app, args.buildNumber, args.branch || 'main');
       
-      const actionsText = `⏳ **Acciones Pendientes - Build #${args.buildNumber}**\n\n` +
+      const pendingText = `⏳ **Acciones Pendientes - Build #${args.buildNumber}**\n\n` +
         `**ID:** ${result.id}\n` +
         `**Proceed URL:** ${result.proceedUrl}\n` +
         `**Abort URL:** ${result.abortUrl}\n` +
         (result.message ? `**Mensaje:** ${result.message}\n` : '') +
-        (result.inputs ? 
-          `\n**Inputs requeridos:**\n${result.inputs.map(input => 
-            `- ${input.name}: ${input.description || 'Sin descripción'}`
-          ).join('\n')}` : '');
+        (result.inputs && result.inputs.length > 0 ? 
+          `**Inputs requeridos:**\n${result.inputs.map(input => `- ${input.name}: ${input.description || 'N/A'}`).join('\n')}`
+          : '');
 
       return {
-        content: [{ type: "text", text: actionsText }],
+        content: [{ type: "text", text: pendingText }],
       };
     } catch (error: any) {
       return {
@@ -253,7 +257,8 @@ server.tool(
     app: z.string().describe("Nombre de la aplicación"),
     buildNumber: z.number().describe("Número del build"),
     packageName: z.string().optional().describe("Nombre del paquete específico"),
-    className: z.string().optional().describe("Nombre de la clase específica")
+    className: z.string().optional().describe("Nombre de la clase específica"),
+    branch: z.string().optional().describe("Rama de Git (por defecto: main)")
   },
   async (args) => {
     try {
@@ -261,7 +266,8 @@ server.tool(
         args.app, 
         args.buildNumber, 
         args.packageName, 
-        args.className
+        args.className,
+        args.branch || 'main'
       );
       
       let coverageText: string;
@@ -303,11 +309,12 @@ server.tool(
   {
     app: z.string().describe("Nombre de la aplicación"),
     buildNumber: z.number().describe("Número del build"),
-    path: z.string().describe("Ruta del archivo")
+    path: z.string().describe("Ruta del archivo"),
+    branch: z.string().optional().describe("Rama de Git (por defecto: main)")
   },
   async (args) => {
     try {
-      const result = await getJenkinsService().getCoverageReportLines(args.app, args.buildNumber, args.path);
+      const result = await getJenkinsService().getCoverageReportLines(args.app, args.buildNumber, args.path, args.branch || 'main');
       
       const linesText = `📄 **Cobertura de Archivo: ${args.path}**\n\n` +
         `**Declaraciones:** ${Object.keys(result.statementMap).length}\n` +
@@ -333,11 +340,12 @@ server.tool(
   "Obtener todos los paths de archivos con cobertura",
   {
     app: z.string().describe("Nombre de la aplicación"),
-    buildNumber: z.number().describe("Número del build")
+    buildNumber: z.number().describe("Número del build"),
+    branch: z.string().optional().describe("Rama de Git (por defecto: main)")
   },
   async (args) => {
     try {
-      const result = await getJenkinsService().getCoverageReportPaths(args.app, args.buildNumber);
+      const result = await getJenkinsService().getCoverageReportPaths(args.app, args.buildNumber, args.branch || 'main');
       
       const pathsText = `📂 **Paths de Cobertura - Build #${args.buildNumber}**\n\n` +
         `**Total de archivos:** ${result.length}\n\n` +

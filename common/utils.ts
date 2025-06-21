@@ -51,19 +51,18 @@ export function createHttpsAgent() {
 }
 
 /**
- * Construir URL del job eliminando el parámetro area (solo app)
+ * Construir URL del job con branch específico
+ * Formato: /job/{app}/job/{branch}
  */
-export function buildJobUrl(baseUrl: string, app: string): string {
-  // En el código Java era: /job/%s/job/app%s-%s-pipeline (area, area, app)
-  // Simplificamos a solo usar app: /job/app-{app}-pipeline
-  return `${baseUrl}/jenkins/job/app-${app}-pipeline`;
+export function buildJobUrl(baseUrl: string, app: string, branch: string = 'main'): string {
+  return `${baseUrl}/jenkins/job/${app}/job/${branch}`;
 }
 
 /**
  * Construir URL del job con número de build
  */
-export function buildJobBuildUrl(baseUrl: string, app: string, buildNumber: number): string {
-  return `${buildJobUrl(baseUrl, app)}/${buildNumber}`;
+export function buildJobBuildUrl(baseUrl: string, app: string, buildNumber: number, branch: string = 'main'): string {
+  return `${buildJobUrl(baseUrl, app, branch)}/${buildNumber}`;
 }
 
 /**
