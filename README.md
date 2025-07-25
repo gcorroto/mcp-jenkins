@@ -2,6 +2,10 @@
 
 MCP server para integración con Jenkins CI/CD. Este servidor permite interactuar con Jenkins desde cualquier cliente MCP compatible (como Claude Desktop) para gestionar jobs, builds, reportes de cobertura y más.
 
+<a href="https://glama.ai/mcp/servers/@gcorroto/mcp-jenkins">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@gcorroto/mcp-jenkins/badge" alt="MCP-Jenkins MCP server" />
+</a>
+
 ## Características
 
 - ✅ **Gestión de Jobs**: Obtener estado, iniciar y detener jobs
