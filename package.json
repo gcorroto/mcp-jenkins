@@ -1,6 +1,6 @@
 {
   "name": "@grec0/mcp-jenkins",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "MCP server para integración con Jenkins CI/CD",
   "license": "MIT",
   "author": "@grec0",
