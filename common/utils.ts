@@ -41,6 +41,15 @@ export function createFormHeaders(config: JenkinsConfig): Record<string, string>
   };
 }
 
+export function createXmlHeaders(config: JenkinsConfig): Record<string, string> {
+  const credentials = Buffer.from(`${config.username}:${config.password}`).toString('base64');
+  return {
+    'Authorization': `Basic ${credentials}`,
+    'Content-Type': 'application/xml',
+    'Accept': 'application/json',
+  };
+}
+
 /**
  * Crear agente HTTPS que ignora certificados auto-firmados (similar al código Java)
  */
@@ -70,17 +79,51 @@ export function buildJobBuildUrl(baseUrl: string, app: string, buildNumber: numb
   return `${buildJobUrl(baseUrl, app, branch)}/${buildNumber}`;
 }
 
+export function buildFullNameJobPath(fullName: string): string {
+  const cleanFullName = fullName
+    .split('/')
+    .map(segment => segment.trim())
+    .filter(Boolean);
+
+  if (cleanFullName.length === 0) {
+    throw new Error('Jenkins job fullName is required.');
+  }
+
+  return cleanFullName
+    .map(segment => `/job/${encodeURIComponent(segment)}`)
+    .join('');
+}
+
+export function buildJobFullNameUrl(baseUrl: string, fullName: string): string {
+  const path = buildFullNameJobPath(fullName);
+  return baseUrl ? `${baseUrl}${path}` : path;
+}
+
+export function buildJobFullNameBuildUrl(baseUrl: string, fullName: string, buildNumber: number): string {
+  return `${buildJobFullNameUrl(baseUrl, fullName)}/${buildNumber}`;
+}
+
+export function validateJobFullName(fullName: string): boolean {
+  return fullName.trim().length > 0 && !/[<>'"&]/.test(fullName);
+}
+
+export function requireExactConfirmation(target: string, confirmation: string | undefined, action: string): void {
+  if (confirmation !== target) {
+    throw new Error(`${action} requires explicit confirmation. Set confirmation to exactly: ${target}`);
+  }
+}
+
 /**
  * Manejar errores de respuesta HTTP
  */
 export function handleHttpError(error: any, context: string): JenkinsError {
   const jenkinsError = new JenkinsError(`${context}: ${error.message}`);
-  
+
   if (error.response) {
     jenkinsError.status = error.response.status;
     jenkinsError.response = error.response.data;
   }
-  
+
   return jenkinsError;
 }
 
@@ -89,11 +132,11 @@ export function handleHttpError(error: any, context: string): JenkinsError {
  */
 export function formatDuration(milliseconds: number): string {
   if (!milliseconds) return 'N/A';
-  
+
   const seconds = Math.floor(milliseconds / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
-  
+
   if (hours > 0) {
     return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
   } else if (minutes > 0) {

@@ -30,6 +30,65 @@ export interface Build {
   result?: string;
   timestamp?: number;
   displayName?: string;
+  description?: string;
+  id?: string;
+  keepLog?: boolean;
+  artifacts?: Artifact[];
+  actions?: any[];
+}
+
+export interface JobSummary {
+  name: string;
+  fullName?: string;
+  url: string;
+  buildable?: boolean;
+  color?: string;
+  description?: string;
+  displayName?: string;
+  nextBuildNumber?: number;
+  lastBuild?: Build | null;
+}
+
+export interface JobListOptions {
+  folder?: string;
+  query?: string;
+  limit?: number;
+}
+
+export interface JobConfigResult {
+  fullName: string;
+  configXml: string;
+}
+
+export interface CreatePipelineJobOptions {
+  fullName: string;
+  configXml: string;
+}
+
+export interface BuildListOptions {
+  fullName: string;
+  limit?: number;
+}
+
+export interface BuildStartOptions {
+  fullName: string;
+  parameters?: Record<string, string | number | boolean>;
+}
+
+export interface Artifact {
+  displayPath?: string;
+  fileName: string;
+  relativePath: string;
+  url?: string;
+}
+
+export interface ConsoleTextResult {
+  fullName: string;
+  buildNumber: number;
+  text: string;
+  start?: number;
+  end?: number;
+  hasMore?: boolean;
 }
 
 export interface BuildSteps {
@@ -132,7 +191,7 @@ export interface GitBranch {
 export class JenkinsError extends Error {
   status?: number;
   response?: any;
-  
+
   constructor(message: string) {
     super(message);
     this.name = 'JenkinsError';

@@ -44,14 +44,14 @@ server.tool(
   async (args) => {
     try {
       const result = await getJenkinsService().getJobStatus(args.app, args.branch || 'main');
-      
+
       const lastBuild = result.lastBuild;
       const statusText = `🔧 **Estado del Job: ${result.displayName}**\n\n` +
         `**URL:** ${result.url}\n` +
         `**Estado:** ${result.color}\n` +
         `**Construible:** ${result.buildable ? '✅' : '❌'}\n` +
         `**Próximo build:** #${result.nextBuildNumber}\n\n` +
-        (lastBuild ? 
+        (lastBuild ?
           `**Último build:** #${lastBuild.number}\n` +
           `**Resultado:** ${lastBuild.result || 'En progreso'}\n` +
           `**Duración:** ${formatDuration(lastBuild.duration || 0)}\n` +
@@ -80,7 +80,7 @@ server.tool(
   async (args) => {
     try {
       const result = await getJenkinsService().startJob(args.app, args.branch);
-      
+
       return {
         content: [{ type: "text", text: `🚀 **${result}**` }],
       };
@@ -104,7 +104,7 @@ server.tool(
   async (args) => {
     try {
       const result = await getJenkinsService().stopJob(args.app, args.buildNumber, args.branch || 'main');
-      
+
       return {
         content: [{ type: "text", text: `🛑 **${result}**` }],
       };
@@ -128,7 +128,7 @@ server.tool(
   async (args) => {
     try {
       const result = await getJenkinsService().getJobStepsStatus(args.app, args.buildNumber, args.branch || 'main');
-      
+
       const stepsText = `📋 **Steps del Build #${args.buildNumber} - ${args.app}**\n\n` +
         `**ID:** ${result.id}\n` +
         `**Nombre:** ${result.name}\n` +
@@ -136,7 +136,7 @@ server.tool(
         `**Duración:** ${formatDuration(result.durationMillis)}\n` +
         `**Inicio:** ${formatTimestamp(result.startTimeMillis)}\n\n` +
         `**Stages (${result.stages.length}):**\n` +
-        result.stages.map(stage => 
+        result.stages.map(stage =>
           `- **${stage.name}** (${stage.status}) - ${formatDuration(stage.durationMillis)}`
         ).join('\n');
 
@@ -164,9 +164,9 @@ server.tool(
   async (args) => {
     try {
       const result = await getJenkinsService().getNodeStatus(args.app, args.buildNumber, args.nodeId, args.branch || 'main');
-      
+
       let statusText: string;
-      
+
       if ('proceedUrl' in result) {
         // Es un PendingInputAction
         statusText = `⏸️ **Nodo Esperando Input - ${args.nodeId}**\n\n` +
@@ -206,13 +206,13 @@ server.tool(
   async (args) => {
     try {
       const result = await getJenkinsService().getPendingInputActions(args.app, args.buildNumber, args.branch || 'main');
-      
+
       const pendingText = `⏳ **Acciones Pendientes - Build #${args.buildNumber}**\n\n` +
         `**ID:** ${result.id}\n` +
         `**Proceed URL:** ${result.proceedUrl}\n` +
         `**Abort URL:** ${result.abortUrl}\n` +
         (result.message ? `**Mensaje:** ${result.message}\n` : '') +
-        (result.inputs && result.inputs.length > 0 ? 
+        (result.inputs && result.inputs.length > 0 ?
           `**Inputs requeridos:**\n${result.inputs.map(input => `- ${input.name}: ${input.description || 'N/A'}`).join('\n')}`
           : '');
 
@@ -237,7 +237,7 @@ server.tool(
   async (args) => {
     try {
       const result = await getJenkinsService().submitInputAction(args.decisionUrl);
-      
+
       return {
         content: [{ type: "text", text: `✅ **${result}**` }],
       };
@@ -263,33 +263,33 @@ server.tool(
   async (args) => {
     try {
       const result = await getJenkinsService().getCoverageReport(
-        args.app, 
-        args.buildNumber, 
-        args.packageName, 
+        args.app,
+        args.buildNumber,
+        args.packageName,
         args.className,
         args.branch || 'main'
       );
-      
+
       let coverageText: string;
-      
+
       if ('instructionCoverage' in result) {
-         // Es un CoverageReport (backend)
-         coverageText = `📊 **Reporte de Cobertura - Build #${args.buildNumber}**\n\n` +
-           `**Instrucciones:** ${result.instructionCoverage?.percentage || 0}% (${result.instructionCoverage?.covered || 0}/${result.instructionCoverage?.total || 0})\n` +
-           `**Ramas:** ${result.branchCoverage?.percentage || 0}% (${result.branchCoverage?.covered || 0}/${result.branchCoverage?.total || 0})\n` +
-           `**Líneas:** ${result.lineCoverage?.percentage || 0}% (${result.lineCoverage?.covered || 0}/${result.lineCoverage?.total || 0})`;
-       } else {
-         // Es un CoverageSummary (frontend)
-         const summary = result as CoverageSummary;
-         const stmtPercent = summary.statements > 0 ? ((summary.statements - summary.uncoveredStatements) / summary.statements * 100).toFixed(2) : 0;
-         const funcPercent = summary.functions > 0 ? ((summary.functions - summary.uncoveredFunctions) / summary.functions * 100).toFixed(2) : 0;
-         const branchPercent = summary.branches > 0 ? ((summary.branches - summary.uncoveredBranches) / summary.branches * 100).toFixed(2) : 0;
-         
-         coverageText = `📊 **Resumen de Cobertura - Build #${args.buildNumber}**\n\n` +
-           `**Declaraciones:** ${stmtPercent}% (${summary.statements - summary.uncoveredStatements}/${summary.statements})\n` +
-           `**Funciones:** ${funcPercent}% (${summary.functions - summary.uncoveredFunctions}/${summary.functions})\n` +
-           `**Ramas:** ${branchPercent}% (${summary.branches - summary.uncoveredBranches}/${summary.branches})`;
-       }
+        // Es un CoverageReport (backend)
+        coverageText = `📊 **Reporte de Cobertura - Build #${args.buildNumber}**\n\n` +
+          `**Instrucciones:** ${result.instructionCoverage?.percentage || 0}% (${result.instructionCoverage?.covered || 0}/${result.instructionCoverage?.total || 0})\n` +
+          `**Ramas:** ${result.branchCoverage?.percentage || 0}% (${result.branchCoverage?.covered || 0}/${result.branchCoverage?.total || 0})\n` +
+          `**Líneas:** ${result.lineCoverage?.percentage || 0}% (${result.lineCoverage?.covered || 0}/${result.lineCoverage?.total || 0})`;
+      } else {
+        // Es un CoverageSummary (frontend)
+        const summary = result as CoverageSummary;
+        const stmtPercent = summary.statements > 0 ? ((summary.statements - summary.uncoveredStatements) / summary.statements * 100).toFixed(2) : 0;
+        const funcPercent = summary.functions > 0 ? ((summary.functions - summary.uncoveredFunctions) / summary.functions * 100).toFixed(2) : 0;
+        const branchPercent = summary.branches > 0 ? ((summary.branches - summary.uncoveredBranches) / summary.branches * 100).toFixed(2) : 0;
+
+        coverageText = `📊 **Resumen de Cobertura - Build #${args.buildNumber}**\n\n` +
+          `**Declaraciones:** ${stmtPercent}% (${summary.statements - summary.uncoveredStatements}/${summary.statements})\n` +
+          `**Funciones:** ${funcPercent}% (${summary.functions - summary.uncoveredFunctions}/${summary.functions})\n` +
+          `**Ramas:** ${branchPercent}% (${summary.branches - summary.uncoveredBranches}/${summary.branches})`;
+      }
 
       return {
         content: [{ type: "text", text: coverageText }],
@@ -315,7 +315,7 @@ server.tool(
   async (args) => {
     try {
       const result = await getJenkinsService().getCoverageReportLines(args.app, args.buildNumber, args.path, args.branch || 'main');
-      
+
       const linesText = `📄 **Cobertura de Archivo: ${args.path}**\n\n` +
         `**Declaraciones:** ${Object.keys(result.statementMap).length}\n` +
         `**Funciones:** ${Object.keys(result.fnMap).length}\n` +
@@ -346,7 +346,7 @@ server.tool(
   async (args) => {
     try {
       const result = await getJenkinsService().getCoverageReportPaths(args.app, args.buildNumber, args.branch || 'main');
-      
+
       const pathsText = `📂 **Paths de Cobertura - Build #${args.buildNumber}**\n\n` +
         `**Total de archivos:** ${result.length}\n\n` +
         result.slice(0, 20).map((path, index) => `${index + 1}. ${path}`).join('\n') +
@@ -373,7 +373,7 @@ server.tool(
   async (args) => {
     try {
       const result = await getJenkinsService().getGitBranches(args.app);
-      
+
       const branchesText = `🌿 **Ramas de Git Disponibles - ${args.app}**\n\n` +
         `**Total de ramas:** ${result.length}\n\n` +
         result.slice(0, 15).map((branch, index) => `${index + 1}. ${branch}`).join('\n') +
@@ -390,46 +390,218 @@ server.tool(
   }
 );
 
+function jsonResponse(result: unknown) {
+  return {
+    content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+  };
+}
+
+function errorResponse(error: any) {
+  return {
+    content: [{ type: "text" as const, text: `❌ **Error:** ${error.message}` }],
+  };
+}
+
+const buildParametersSchema = z.record(z.union([z.string(), z.number(), z.boolean()]));
+
+server.tool(
+  "jenkins_job_manager",
+  "Gestionar jobs y pipelines de Jenkins: listar, leer, crear, actualizar config, borrar, habilitar, deshabilitar y ramas Git",
+  {
+    action: z.enum(["list", "get", "get_config", "create_pipeline", "update_config", "delete", "enable", "disable", "get_branches"]).describe("Acción a ejecutar"),
+    fullName: z.string().optional().describe("Ruta completa del job en Jenkins, por ejemplo folder/app/main"),
+    folder: z.string().optional().describe("Folder desde el que listar jobs"),
+    query: z.string().optional().describe("Filtro de texto para nombre o fullName"),
+    limit: z.number().optional().describe("Máximo de resultados a devolver"),
+    configXml: z.string().optional().describe("config.xml completo para crear o actualizar un job"),
+    confirmName: z.string().optional().describe("Confirmación exacta requerida para update_config, delete, enable y disable"),
+    app: z.string().optional().describe("Nombre de la aplicación para get_branches compatible con herramientas existentes")
+  },
+  async (args) => {
+    try {
+      const service = getJenkinsService();
+
+      switch (args.action) {
+        case "list":
+          return jsonResponse(await service.listJobs({ folder: args.folder, query: args.query, limit: args.limit }));
+
+        case "get":
+          if (!args.fullName) throw new Error("fullName is required for get action");
+          return jsonResponse(await service.getJobByFullName(args.fullName));
+
+        case "get_config":
+          if (!args.fullName) throw new Error("fullName is required for get_config action");
+          return jsonResponse(await service.getJobConfig(args.fullName));
+
+        case "create_pipeline":
+          if (!args.fullName || !args.configXml) throw new Error("fullName and configXml are required for create_pipeline action");
+          return jsonResponse({ message: await service.createPipelineJob({ fullName: args.fullName, configXml: args.configXml }) });
+
+        case "update_config":
+          if (!args.fullName || !args.configXml) throw new Error("fullName and configXml are required for update_config action");
+          return jsonResponse({ message: await service.updateJobConfig(args.fullName, args.configXml, args.confirmName) });
+
+        case "delete":
+          if (!args.fullName) throw new Error("fullName is required for delete action");
+          return jsonResponse({ message: await service.deleteJob(args.fullName, args.confirmName) });
+
+        case "enable":
+          if (!args.fullName) throw new Error("fullName is required for enable action");
+          return jsonResponse({ message: await service.setJobEnabled(args.fullName, true, args.confirmName) });
+
+        case "disable":
+          if (!args.fullName) throw new Error("fullName is required for disable action");
+          return jsonResponse({ message: await service.setJobEnabled(args.fullName, false, args.confirmName) });
+
+        case "get_branches":
+          if (!args.app) throw new Error("app is required for get_branches action");
+          return jsonResponse(await service.getGitBranches(args.app));
+
+        default:
+          throw new Error(`Unknown action: ${args.action}`);
+      }
+    } catch (error: any) {
+      return errorResponse(error);
+    }
+  }
+);
+
+server.tool(
+  "jenkins_build_manager",
+  "Gestionar builds de Jenkins: listar, consultar, iniciar, detener con confirmación, reconstruir, replay, logs y artifacts",
+  {
+    action: z.enum(["list", "get", "start", "stop", "rebuild", "replay", "console", "artifacts"]).describe("Acción a ejecutar"),
+    fullName: z.string().describe("Ruta completa del job en Jenkins, por ejemplo folder/app/main"),
+    buildNumber: z.number().optional().describe("Número de build"),
+    limit: z.number().optional().describe("Límite de builds o caracteres de consola"),
+    start: z.number().optional().describe("Offset para logs progresivos"),
+    parameters: buildParametersSchema.optional().describe("Parámetros para iniciar buildWithParameters"),
+    confirmBuild: z.number().optional().describe("Confirmación exacta requerida para stop")
+  },
+  async (args) => {
+    try {
+      const service = getJenkinsService();
+
+      switch (args.action) {
+        case "list":
+          return jsonResponse(await service.listBuilds({ fullName: args.fullName, limit: args.limit }));
+
+        case "get":
+          if (args.buildNumber === undefined) throw new Error("buildNumber is required for get action");
+          return jsonResponse(await service.getBuildByFullName(args.fullName, args.buildNumber));
+
+        case "start":
+          return jsonResponse({ message: await service.startBuild({ fullName: args.fullName, parameters: args.parameters }) });
+
+        case "stop":
+          if (args.buildNumber === undefined) throw new Error("buildNumber is required for stop action");
+          return jsonResponse({ message: await service.stopBuildByFullName(args.fullName, args.buildNumber, args.confirmBuild) });
+
+        case "rebuild":
+          if (args.buildNumber === undefined) throw new Error("buildNumber is required for rebuild action");
+          return jsonResponse({ message: await service.replayBuild(args.fullName, args.buildNumber, "rebuild") });
+
+        case "replay":
+          if (args.buildNumber === undefined) throw new Error("buildNumber is required for replay action");
+          return jsonResponse({ message: await service.replayBuild(args.fullName, args.buildNumber, "replay") });
+
+        case "console":
+          if (args.buildNumber === undefined) throw new Error("buildNumber is required for console action");
+          return jsonResponse(await service.getBuildConsole(args.fullName, args.buildNumber, args.start, args.limit));
+
+        case "artifacts":
+          if (args.buildNumber === undefined) throw new Error("buildNumber is required for artifacts action");
+          return jsonResponse(await service.listArtifacts(args.fullName, args.buildNumber));
+
+        default:
+          throw new Error(`Unknown action: ${args.action}`);
+      }
+    } catch (error: any) {
+      return errorResponse(error);
+    }
+  }
+);
+
+server.tool(
+  "jenkins_pipeline_monitor",
+  "Monitorear pipelines Jenkins: stages, nodos, inputs pendientes y envío de acciones de input",
+  {
+    action: z.enum(["steps", "node", "pending_inputs", "submit_input"]).describe("Acción a ejecutar"),
+    fullName: z.string().optional().describe("Ruta completa del job en Jenkins"),
+    buildNumber: z.number().optional().describe("Número de build"),
+    nodeId: z.string().optional().describe("ID del nodo del pipeline"),
+    decisionUrl: z.string().optional().describe("URL proceedUrl o abortUrl devuelta por Jenkins")
+  },
+  async (args) => {
+    try {
+      const service = getJenkinsService();
+
+      switch (args.action) {
+        case "steps":
+          if (!args.fullName || args.buildNumber === undefined) throw new Error("fullName and buildNumber are required for steps action");
+          return jsonResponse(await service.getBuildStepsByFullName(args.fullName, args.buildNumber));
+
+        case "node":
+          if (!args.fullName || args.buildNumber === undefined || !args.nodeId) throw new Error("fullName, buildNumber and nodeId are required for node action");
+          return jsonResponse(await service.getNodeStatusByFullName(args.fullName, args.buildNumber, args.nodeId));
+
+        case "pending_inputs":
+          if (!args.fullName || args.buildNumber === undefined) throw new Error("fullName and buildNumber are required for pending_inputs action");
+          return jsonResponse(await service.getPendingInputActionsByFullName(args.fullName, args.buildNumber));
+
+        case "submit_input":
+          if (!args.decisionUrl) throw new Error("decisionUrl is required for submit_input action");
+          return jsonResponse({ message: await service.submitInputAction(args.decisionUrl) });
+
+        default:
+          throw new Error(`Unknown action: ${args.action}`);
+      }
+    } catch (error: any) {
+      return errorResponse(error);
+    }
+  }
+);
+
 async function runServer() {
   try {
     console.error("Creating Jenkins MCP Server...");
     console.error("Server info: jenkins-mcp-server");
     console.error("Version:", VERSION);
-    
+
     // Validate environment variables
     if (!process.env.JENKINS_URL) {
       console.error("Warning: JENKINS_URL environment variable not set");
     } else {
       console.error("JENKINS_URL:", process.env.JENKINS_URL);
     }
-    
+
     if (!process.env.JENKINS_USERNAME) {
       console.error("Warning: JENKINS_USERNAME environment variable not set");
     } else {
       console.error("JENKINS_USERNAME:", process.env.JENKINS_USERNAME);
     }
-    
+
     if (!process.env.JENKINS_PASSWORD) {
-      console.error("Warning: JENKINS_PASSWORD environment variable not set");  
+      console.error("Warning: JENKINS_PASSWORD environment variable not set");
     } else {
       console.error("JENKINS_PASSWORD:", "***");
     }
-    
+
     console.error("Starting Jenkins MCP Server in stdio mode...");
-    
+
     // Create transport
     const transport = new StdioServerTransport();
-    
+
     console.error("Connecting server to transport...");
-    
+
     // Connect server to transport - this should keep the process alive
     await server.connect(transport);
-    
+
     console.error("MCP Server connected and ready!");
     console.error("Available tools:", [
       "jenkins_get_job_status",
       "jenkins_start_job",
-      "jenkins_stop_job", 
+      "jenkins_stop_job",
       "jenkins_get_build_steps",
       "jenkins_get_node_status",
       "jenkins_get_pending_actions",
@@ -437,9 +609,12 @@ async function runServer() {
       "jenkins_get_coverage_report",
       "jenkins_get_coverage_lines",
       "jenkins_get_coverage_paths",
-      "jenkins_get_git_branches"
+      "jenkins_get_git_branches",
+      "jenkins_job_manager",
+      "jenkins_build_manager",
+      "jenkins_pipeline_monitor"
     ]);
-    
+
   } catch (error) {
     console.error("Error starting server:", error);
     console.error("Stack trace:", (error as Error).stack);
