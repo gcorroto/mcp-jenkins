@@ -75,6 +75,26 @@ export interface BuildStartOptions {
   parameters?: Record<string, string | number | boolean>;
 }
 
+export interface WaitForBuildOptions {
+  fullName: string;
+  buildNumber: number;
+  pollIntervalSeconds?: number;
+  timeoutSeconds?: number;
+  includeStages?: boolean;
+}
+
+export interface WaitForBuildResult {
+  fullName: string;
+  buildNumber: number;
+  completed: boolean;
+  timedOut: boolean;
+  waitedSeconds: number;
+  pollCount: number;
+  result?: string;
+  build: Build;
+  stages?: Stage[];
+}
+
 export interface Artifact {
   displayPath?: string;
   fileName: string;

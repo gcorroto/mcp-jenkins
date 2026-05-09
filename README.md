@@ -1,257 +1,614 @@
 # @grec0/mcp-jenkins
 
-MCP server para integración con Jenkins CI/CD. Este servidor permite interactuar con Jenkins desde cualquier cliente MCP compatible (como Claude Desktop) para gestionar jobs, builds, reportes de cobertura y más.
+MCP server para operar Jenkins desde clientes compatibles con Model Context Protocol, como VS Code, Claude Desktop u otros agentes. Permite consultar jobs, lanzar builds, esperar a que terminen, revisar logs, inspeccionar stages de pipelines, gestionar approvals, consultar artifacts/cobertura y administrar jobs sin entrar en la UI de Jenkins.
 
-## Características
+## Que Puedes Hacer
 
-- ✅ **Gestión de Jobs**: Obtener estado, iniciar y detener jobs
-- 🧩 **CRUD de Jobs/Pipelines**: Listar, leer config.xml, crear pipelines, actualizar, borrar, habilitar y deshabilitar jobs
-- 🏗️ **Gestión de Builds**: Listar ejecuciones, consultar detalles, iniciar builds, detener con confirmación, rebuild/replay, logs y artifacts
-- 📋 **Monitoreo de Builds**: Ver steps, nodos y estados de ejecución  
-- 🔄 **Acciones de Input**: Manejar aprobaciones y acciones pendientes
-- 📊 **Reportes de Cobertura**: Analizar cobertura de código detallada
-- 🌿 **Integración Git**: Listar ramas disponibles para builds
-- 🔒 **Autenticación Segura**: Soporte para HTTPS con certificados auto-firmados
+- Listar jobs, multibranch projects y ramas.
+- Consultar estado, configuracion y ultimo build de un job.
+- Lanzar builds con o sin parametros.
+- Esperar de forma bloqueante hasta que un build termine.
+- Ver historial de builds, logs, stages, nodos y acciones pendientes.
+- Detener builds con confirmacion explicita.
+- Hacer rebuild/replay si Jenkins tiene los endpoints/plugins necesarios.
+- Crear, actualizar, habilitar, deshabilitar o borrar jobs usando confirmaciones de seguridad.
+- Consultar reportes de cobertura cuando el job los publique.
 
-## Instalación
+## Quick Start
 
-### Opción 1: Usar con npx (Recomendado)
-```bash
-# No requiere instalación global
-npx @grec0/mcp-jenkins
-```
+### Requisitos
 
-### Opción 2: Instalación global
-```bash
-npm install -g @grec0/mcp-jenkins
-```
+- Node.js 18 o superior.
+- URL de Jenkins accesible desde la maquina donde corre el cliente MCP.
+- Usuario de Jenkins con permisos suficientes.
+- API token o password de Jenkins.
 
-## Requisitos Previos
+Usa API tokens cuando sea posible. No guardes credenciales reales en repositorios ni compartas configuraciones con secretos.
 
-### Plugins de Jenkins Requeridos
+### Configuracion Recomendada Con npx
 
-⚠️ **IMPORTANTE**: Para funcionalidad completa, necesitas estos plugins instalados en Jenkins:
-
-**Obligatorios:**
-- `pipeline-rest-api` - Para API de pipelines
-- `git-parameter` - Para listado de ramas Git
-
-**Opcionales (para cobertura):**
-- `jacoco` - Para reportes de cobertura Java
-- Plugin de cobertura frontend (Istanbul, etc.)
-
-📖 **Ver [JENKINS_REQUIREMENTS.md](./JENKINS_REQUIREMENTS.md) para instrucciones detalladas de instalación**
-
-## Configuración
-
-### Variables de Entorno
-
-```bash
-export JENKINS_URL="https://tu-jenkins.com"
-export JENKINS_USERNAME="tu-usuario"
-export JENKINS_PASSWORD="tu-token-o-password"
-```
-
-### Configuración en Claude Desktop
-
-Agregar al archivo de configuración de Claude Desktop:
-
-#### Opción 1: Con npx (Recomendado)
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "jenkins": {
+      "type": "stdio",
       "command": "npx",
-      "args": ["@grec0/mcp-jenkins"],
+      "args": ["-y", "--package", "@grec0/mcp-jenkins@latest", "mcp-jenkins"],
       "env": {
-        "JENKINS_URL": "https://tu-jenkins.com",
-        "JENKINS_USERNAME": "tu-usuario", 
-        "JENKINS_PASSWORD": "tu-token"
+        "JENKINS_URL": "https://tu-jenkins.com/jenkins",
+        "JENKINS_USERNAME": "tu-usuario",
+        "JENKINS_PASSWORD": "tu-api-token"
       }
     }
   }
 }
 ```
 
-#### Opción 2: Con instalación global
+Para fijar una version concreta, cambia `@latest` por una version publicada:
+
+```json
+"args": ["-y", "--package", "@grec0/mcp-jenkins@0.2.2", "mcp-jenkins"]
+```
+
+### Instalacion Global Opcional
+
+```bash
+npm install -g @grec0/mcp-jenkins
+```
+
+Configuracion usando el binario global:
+
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "jenkins": {
+      "type": "stdio",
       "command": "mcp-jenkins",
       "env": {
-        "JENKINS_URL": "https://tu-jenkins.com",
-        "JENKINS_USERNAME": "tu-usuario", 
-        "JENKINS_PASSWORD": "tu-token"
+        "JENKINS_URL": "https://tu-jenkins.com/jenkins",
+        "JENKINS_USERNAME": "tu-usuario",
+        "JENKINS_PASSWORD": "tu-api-token"
       }
     }
   }
 }
 ```
 
-## Herramientas Disponibles
+## Conceptos Basicos
 
-### Gestión de Jobs
+### `fullName`
 
-- `jenkins_get_job_status` - Obtener estado de un job
-- `jenkins_start_job` - Iniciar un job con rama específica
-- `jenkins_stop_job` - Detener un job en ejecución
-- `jenkins_get_git_branches` - Listar ramas de Git disponibles
-- `jenkins_job_manager` - Gestionar jobs y pipelines con acciones `list`, `get`, `get_config`, `create_pipeline`, `update_config`, `delete`, `enable`, `disable`, `get_branches`
+La mayoria de herramientas nuevas usan `fullName`, que es la ruta logica del job en Jenkins.
 
-> Las acciones `update_config`, `delete`, `enable` y `disable` requieren `confirmName` con el mismo valor exacto de `fullName`.
+Ejemplos:
 
-### Monitoreo de Builds
-
-- `jenkins_get_build_steps` - Ver steps de un build
-- `jenkins_get_node_status` - Estado de un nodo específico
-- `jenkins_get_pending_actions` - Acciones pendientes de input
-- `jenkins_build_manager` - Gestionar ejecuciones con acciones `list`, `get`, `start`, `stop`, `rebuild`, `replay`, `console`, `artifacts`
-- `jenkins_pipeline_monitor` - Monitorear pipelines con acciones `steps`, `node`, `pending_inputs`, `submit_input`
-
-> La acción `stop` requiere `confirmBuild` con el mismo número exacto del build.
-
-### Acciones de Input
-
-- `jenkins_submit_input_action` - Enviar aprobación/rechazo
-
-### Reportes de Cobertura
-
-- `jenkins_get_coverage_report` - Reporte de cobertura general
-- `jenkins_get_coverage_lines` - Cobertura de archivo específico
-- `jenkins_get_coverage_paths` - Listar archivos con cobertura
-
-## Uso
-
-### Obtener estado de un job
-```
-¿Cuál es el estado del job "mi-app"?
+```text
+Grec0AI_backend_sb
+Grec0AI_backend_sb/main
+folder/backend/main
 ```
 
-### Iniciar un build
-```
-Inicia el job "mi-app" con la rama "feature/nueva-funcionalidad"
-```
+En un multibranch project, normalmente el primer nivel es el proyecto y el segundo nivel es la rama. Por ejemplo, si Jenkins muestra:
 
-### Ver cobertura de código
-```
-Muéstrame el reporte de cobertura del build #123 de "mi-app"
+```text
+Grec0AI_backend_sb / main
 ```
 
-### Aprobar un deployment
-```
-Obtén las acciones pendientes del build #456 de "mi-app" y luego aprueba el deployment
-```
+el `fullName` suele ser:
 
-### Listar jobs sin entrar a Jenkins
-```
-Usa jenkins_job_manager con action "list" y limit 20
+```text
+Grec0AI_backend_sb/main
 ```
 
-### Ver logs de una ejecución
-```
-Usa jenkins_build_manager con action "console", fullName "mi-folder/mi-job/main", buildNumber 123 y limit 8000
-```
+### `app` y `branch`
 
-### Actualizar config.xml de forma protegida
-```
-Usa jenkins_job_manager con action "update_config", fullName "mi-folder/mi-job", configXml "..." y confirmName "mi-folder/mi-job"
-```
+Las tools antiguas usan `app` y `branch`. Siguen disponibles por compatibilidad, pero para uso nuevo se recomienda usar los managers basados en `fullName`.
 
-## Simplificaciones respecto al código Java original
+### Managers vs Tools Simples
 
-- **Eliminación del parámetro `area`**: Solo se usa `app` para simplificar
-- **Estructura de jobs simplificada**: `/job/app-{app}-pipeline` en lugar de `/job/{area}/job/app{area}-{app}-pipeline`
-- **Configuración por variables de entorno**: Más simple que la configuración de Spring Boot
+- Usa `jenkins_job_manager` para jobs y pipelines.
+- Usa `jenkins_build_manager` para ejecuciones/builds.
+- Usa `jenkins_wait_for_build` cuando un agente deba esperar a Jenkins antes de continuar.
+- Usa `jenkins_pipeline_monitor` para stages, nodos e inputs pendientes.
+- Usa las tools `jenkins_get_*`, `jenkins_start_job` y `jenkins_stop_job` si ya tienes prompts antiguos basados en `app` y `branch`.
 
-## Ejecución Manual
+## Flujos Recomendados
 
-### Con npx:
-```bash
-# Configurar variables de entorno
-export JENKINS_URL="https://tu-jenkins.com"
-export JENKINS_USERNAME="tu-usuario"
-export JENKINS_PASSWORD="tu-token"
+### Descubrir Jobs
 
-# Ejecutar
-npx @grec0/mcp-jenkins
+```json
+{
+  "action": "list",
+  "limit": 20
+}
 ```
 
-### Con instalación global:
-```bash
-# Instalar globalmente
-npm install -g @grec0/mcp-jenkins
+Tool: `jenkins_job_manager`
 
-# Configurar variables de entorno
-export JENKINS_URL="https://tu-jenkins.com"
-export JENKINS_USERNAME="tu-usuario"
-export JENKINS_PASSWORD="tu-token"
+### Listar Ramas De Un Multibranch Project
 
-# Ejecutar
-mcp-jenkins
+```json
+{
+  "action": "list",
+  "folder": "Grec0AI_backend_sb",
+  "limit": 20
+}
 ```
 
-## Desarrollo
+Tool: `jenkins_job_manager`
 
-```bash
-# Clonar el repositorio
-git clone https://github.com/gcorroto/mcp-jenkins.git
-cd mcp-jenkins
+### Lanzar Un Build Y Esperar A Que Termine
 
-# Instalar dependencias
-npm install
+1. Inicia el build.
 
-# Compilar
-npm run build
-
-# Ejecutar en modo desarrollo
-npm run dev
-
-# Ejecutar tests
-npm test
-
-# Verificar paquete antes de publicar
-npm run prerelease
+```json
+{
+  "action": "start",
+  "fullName": "Grec0AI_backend_sb/main"
+}
 ```
+
+Tool: `jenkins_build_manager`
+
+2. Lista builds para identificar el numero iniciado.
+
+```json
+{
+  "action": "list",
+  "fullName": "Grec0AI_backend_sb/main",
+  "limit": 5
+}
+```
+
+Tool: `jenkins_build_manager`
+
+3. Espera hasta que Jenkins termine.
+
+```json
+{
+  "fullName": "Grec0AI_backend_sb/main",
+  "buildNumber": 298,
+  "pollIntervalSeconds": 10,
+  "timeoutSeconds": 1800,
+  "includeStages": true
+}
+```
+
+Tool: `jenkins_wait_for_build`
+
+4. Solo despues de recibir `completed: true`, revisa logs, stages o ejecuta validaciones dependientes del build.
+
+### Revisar Un Fallo
+
+```json
+{
+  "action": "console",
+  "fullName": "Grec0AI_backend_sb/main",
+  "buildNumber": 298,
+  "limit": 8000
+}
+```
+
+Tool: `jenkins_build_manager`
+
+```json
+{
+  "action": "steps",
+  "fullName": "Grec0AI_backend_sb/main",
+  "buildNumber": 298
+}
+```
+
+Tool: `jenkins_pipeline_monitor`
+
+### Aprobar O Rechazar Un Input Pendiente
+
+1. Consulta inputs pendientes.
+
+```json
+{
+  "action": "pending_inputs",
+  "fullName": "Grec0AI_backend_sb/main",
+  "buildNumber": 298
+}
+```
+
+Tool: `jenkins_pipeline_monitor`
+
+2. Envia la decision usando la `proceedUrl` o `abortUrl` devuelta por Jenkins.
+
+```json
+{
+  "action": "submit_input",
+  "decisionUrl": "https://tu-jenkins.com/jenkins/job/.../proceedEmpty"
+}
+```
+
+Tool: `jenkins_pipeline_monitor`
+
+## Tools
+
+### `jenkins_job_manager`
+
+Gestiona jobs y pipelines usando rutas `fullName`.
+
+Acciones:
+
+| Accion | Descripcion |
+| --- | --- |
+| `list` | Lista jobs del root o de un folder/multibranch project. |
+| `get` | Obtiene detalle de un job. |
+| `get_config` | Devuelve el `config.xml` de un job. |
+| `create_pipeline` | Crea un job/pipeline desde XML. |
+| `update_config` | Actualiza `config.xml`; requiere `confirmName`. |
+| `delete` | Borra un job; requiere `confirmName`. |
+| `enable` | Habilita un job; requiere `confirmName`. |
+| `disable` | Deshabilita un job; requiere `confirmName`. |
+| `get_branches` | Lista ramas usando el flujo legacy basado en `app`. |
+
+Parametros:
+
+| Parametro | Uso |
+| --- | --- |
+| `action` | Accion a ejecutar. |
+| `fullName` | Ruta del job, por ejemplo `folder/job/main`. |
+| `folder` | Folder o multibranch project desde el que listar. |
+| `query` | Filtro por texto para `list`. |
+| `limit` | Maximo de resultados para `list`. |
+| `configXml` | XML completo para crear o actualizar jobs. |
+| `confirmName` | Confirmacion exacta para acciones protegidas. |
+| `app` | Nombre de aplicacion para `get_branches`. |
+
+Ejemplos:
+
+```json
+{
+  "action": "list",
+  "query": "backend",
+  "limit": 20
+}
+```
+
+```json
+{
+  "action": "get",
+  "fullName": "Grec0AI_backend_sb/main"
+}
+```
+
+```json
+{
+  "action": "get_config",
+  "fullName": "Grec0AI_backend_sb/main"
+}
+```
+
+```json
+{
+  "action": "update_config",
+  "fullName": "sandbox/test-pipeline",
+  "configXml": "<flow-definition>...</flow-definition>",
+  "confirmName": "sandbox/test-pipeline"
+}
+```
+
+```json
+{
+  "action": "delete",
+  "fullName": "sandbox/test-pipeline",
+  "confirmName": "sandbox/test-pipeline"
+}
+```
+
+### `jenkins_build_manager`
+
+Gestiona ejecuciones de Jenkins.
+
+Acciones:
+
+| Accion | Descripcion |
+| --- | --- |
+| `list` | Lista builds recientes de un job. |
+| `get` | Obtiene detalle de un build. |
+| `start` | Inicia un build, opcionalmente con parametros. |
+| `wait` | Espera hasta que un build termine o alcance timeout. |
+| `stop` | Detiene un build; requiere `confirmBuild`. |
+| `rebuild` | Solicita reconstruccion si Jenkins expone el endpoint. |
+| `replay` | Solicita replay si Jenkins expone el endpoint. |
+| `console` | Devuelve logs de consola. |
+| `artifacts` | Lista artifacts archivados con URLs. |
+
+Parametros:
+
+| Parametro | Uso |
+| --- | --- |
+| `action` | Accion a ejecutar. |
+| `fullName` | Ruta del job. |
+| `buildNumber` | Numero de build para acciones sobre una ejecucion. |
+| `parameters` | Parametros para `buildWithParameters`. |
+| `pollIntervalSeconds` | Intervalo entre consultas para `wait`. |
+| `timeoutSeconds` | Tiempo maximo de espera para `wait`. |
+| `includeStages` | Incluye stages al terminar el build. |
+| `limit` | Cantidad de builds o caracteres de log. |
+| `start` | Offset para logs progresivos. |
+| `confirmBuild` | Confirmacion exacta para `stop`. |
+
+Ejemplos:
+
+```json
+{
+  "action": "list",
+  "fullName": "Grec0AI_backend_sb/main",
+  "limit": 10
+}
+```
+
+```json
+{
+  "action": "start",
+  "fullName": "Grec0AI_backend_sb/main",
+  "parameters": {
+    "DEPLOY_ENV": "dev"
+  }
+}
+```
+
+```json
+{
+  "action": "wait",
+  "fullName": "Grec0AI_backend_sb/main",
+  "buildNumber": 298,
+  "pollIntervalSeconds": 10,
+  "timeoutSeconds": 1800,
+  "includeStages": true
+}
+```
+
+```json
+{
+  "action": "console",
+  "fullName": "Grec0AI_backend_sb/main",
+  "buildNumber": 298,
+  "limit": 12000
+}
+```
+
+```json
+{
+  "action": "stop",
+  "fullName": "Grec0AI_backend_sb/main",
+  "buildNumber": 298,
+  "confirmBuild": 298
+}
+```
+
+### `jenkins_wait_for_build`
+
+Tool dedicada para agentes que necesitan bloquear el flujo hasta que Jenkins termine un build. La llamada no responde hasta que el build finaliza o se alcanza el timeout.
+
+Parametros:
+
+| Parametro | Default | Descripcion |
+| --- | --- | --- |
+| `fullName` | Requerido | Ruta del job. |
+| `buildNumber` | Requerido | Numero de build a esperar. |
+| `pollIntervalSeconds` | `10` | Segundos entre consultas. Minimo efectivo: 2. Maximo efectivo: 120. |
+| `timeoutSeconds` | `1800` | Timeout total. Maximo efectivo: 86400. |
+| `includeStages` | `true` | Incluye stages al terminar si el job expone Pipeline REST API. |
+
+Ejemplo:
+
+```json
+{
+  "fullName": "Grec0AI_backend_sb/main",
+  "buildNumber": 298,
+  "pollIntervalSeconds": 10,
+  "timeoutSeconds": 1800,
+  "includeStages": true
+}
+```
+
+Respuesta esperada:
+
+```json
+{
+  "fullName": "Grec0AI_backend_sb/main",
+  "buildNumber": 298,
+  "completed": true,
+  "timedOut": false,
+  "waitedSeconds": 120,
+  "pollCount": 13,
+  "result": "SUCCESS",
+  "build": { "number": 298 },
+  "stages": []
+}
+```
+
+Si `timedOut` es `true`, el build seguia corriendo cuando se alcanzo el timeout.
+
+### `jenkins_pipeline_monitor`
+
+Inspecciona detalles especificos de pipelines.
+
+Acciones:
+
+| Accion | Descripcion |
+| --- | --- |
+| `steps` | Devuelve stages del build. |
+| `node` | Devuelve detalle de un nodo/stage por `nodeId`. |
+| `pending_inputs` | Devuelve input actions pendientes. |
+| `submit_input` | Envia una decision usando `decisionUrl`. |
+
+Ejemplos:
+
+```json
+{
+  "action": "steps",
+  "fullName": "Grec0AI_backend_sb/main",
+  "buildNumber": 296
+}
+```
+
+```json
+{
+  "action": "node",
+  "fullName": "Grec0AI_backend_sb/main",
+  "buildNumber": 296,
+  "nodeId": "20"
+}
+```
+
+```json
+{
+  "action": "pending_inputs",
+  "fullName": "Grec0AI_backend_sb/main",
+  "buildNumber": 298
+}
+```
+
+```json
+{
+  "action": "submit_input",
+  "decisionUrl": "https://tu-jenkins.com/jenkins/job/.../proceedEmpty"
+}
+```
+
+## Tools Simples Y Compatibilidad
+
+Estas tools siguen disponibles para prompts antiguos o flujos simples basados en `app` y `branch`.
+
+| Tool | Uso |
+| --- | --- |
+| `jenkins_get_job_status` | Estado de un job por `app` y `branch`. |
+| `jenkins_start_job` | Inicia un job con una rama. |
+| `jenkins_stop_job` | Detiene un build por `app`, `branch` y `buildNumber`. |
+| `jenkins_get_build_steps` | Stages de un build. |
+| `jenkins_get_node_status` | Estado de un nodo de pipeline. |
+| `jenkins_get_pending_actions` | Input actions pendientes. |
+| `jenkins_submit_input_action` | Envia approval/reject usando una URL de Jenkins. |
+| `jenkins_get_coverage_report` | Resumen de cobertura. |
+| `jenkins_get_coverage_lines` | Cobertura de un archivo. |
+| `jenkins_get_coverage_paths` | Paths con cobertura disponible. |
+| `jenkins_get_git_branches` | Ramas Git disponibles para un job legacy. |
+
+Ejemplo legacy:
+
+```json
+{
+  "app": "mi-app",
+  "branch": "main"
+}
+```
+
+## Operaciones Protegidas
+
+Algunas acciones pueden cambiar o destruir configuracion en Jenkins. El MCP exige confirmacion explicita.
+
+| Accion | Confirmacion |
+| --- | --- |
+| `jenkins_job_manager.update_config` | `confirmName` debe ser igual a `fullName`. |
+| `jenkins_job_manager.delete` | `confirmName` debe ser igual a `fullName`. |
+| `jenkins_job_manager.enable` | `confirmName` debe ser igual a `fullName`. |
+| `jenkins_job_manager.disable` | `confirmName` debe ser igual a `fullName`. |
+| `jenkins_build_manager.stop` | `confirmBuild` debe ser igual a `buildNumber`. |
+
+Recomendacion: prueba primero `create_pipeline`, `update_config` y `delete` en un job temporal.
+
+## Requisitos De Jenkins
+
+Funcionalidad disponible con Jenkins core:
+
+- Listar jobs.
+- Consultar job/build.
+- Iniciar builds.
+- Detener builds.
+- Leer logs.
+- Leer y actualizar `config.xml` si el usuario tiene permisos.
+- Listar artifacts archivados.
+
+Plugins recomendados para funcionalidad completa:
+
+| Plugin | Para Que Sirve |
+| --- | --- |
+| `pipeline-rest-api` | Stages, nodos e input actions de pipelines. |
+| `git-parameter` | Listado de ramas en tools legacy. |
+| `jacoco` | Cobertura backend Java. |
+| Cobertura frontend/Istanbul | Cobertura frontend si el job publica el ZIP esperado. |
+
+Consulta [JENKINS_REQUIREMENTS.md](./JENKINS_REQUIREMENTS.md) para detalle de plugins, endpoints y errores comunes.
+
+## Respuestas Y Limites
+
+- Las tools devuelven JSON serializado como contenido de texto MCP.
+- `console` puede limitar logs con `limit` para evitar respuestas enormes.
+- `artifacts` devuelve metadata y URLs; no descarga binarios por defecto.
+- `coverage` depende mucho de como el job publique sus reportes.
+- `jenkins_wait_for_build` mantiene la llamada abierta hasta fin de build o timeout; ajusta `timeoutSeconds` para builds largos.
 
 ## Troubleshooting
 
-### Error `zod-to-json-schema/dist/esm/parsers/record.js`
+### `ERR_MODULE_NOT_FOUND` con `zod-to-json-schema`
 
-Si al ejecutar con `npx` aparece un error como:
+Si ves un error parecido a:
 
 ```text
-Error [ERR_MODULE_NOT_FOUND]: Cannot find module '.../zod-to-json-schema/dist/esm/parsers/record.js'
+Cannot find module '.../zod-to-json-schema/dist/esm/parsers/record.js'
 ```
 
-Verifica que estás usando una versión del paquete publicada con `zod-to-json-schema` fijado a `3.24.3`:
+usa una version reciente del paquete y preferiblemente arranca con `--package`:
 
-```bash
-npm ls zod-to-json-schema
+```json
+"args": ["-y", "--package", "@grec0/mcp-jenkins@latest", "mcp-jenkins"]
 ```
 
-Antes de publicar una nueva versión ejecuta siempre:
+Si `npx` quedo con una instalacion temporal contaminada, borra la carpeta `_npx` que aparece en el stacktrace o limpia el cache de npm.
+
+### `401` O `403`
+
+Revisa `JENKINS_USERNAME`, `JENKINS_PASSWORD`, API token y permisos del usuario en Jenkins.
+
+### `404` En `/wfapi/describe`
+
+El job puede no ser Pipeline o puede faltar el plugin `pipeline-rest-api`.
+
+### No Encuentro El `fullName`
+
+Primero lista jobs desde el root:
+
+```json
+{
+  "action": "list",
+  "limit": 50
+}
+```
+
+Despues lista dentro del multibranch project:
+
+```json
+{
+  "action": "list",
+  "folder": "nombre-del-proyecto",
+  "limit": 50
+}
+```
+
+### `jenkins_wait_for_build` Agota Timeout
+
+El build seguia corriendo. Sube `timeoutSeconds`, revisa logs con `console` o consulta el build con `jenkins_build_manager get`.
+
+## Desarrollo Local
+
+Esta seccion es solo para quienes quieran modificar el paquete.
 
 ```bash
+npm install
+npm run build
+npm test
 npm run prerelease
 ```
 
-Ese comando compila, valida el contenido del tarball, ejecuta tests e instala el paquete generado en una carpeta temporal para comprobar que las dependencias ESM resuelven correctamente.
+No publiques una version nueva sin ejecutar `npm run prerelease`.
 
 ## Licencia
 
 MIT
-
-## Contribuciones
-
-Las contribuciones son bienvenidas. Por favor:
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/nueva-feature`)
-3. Commit tus cambios (`git commit -am 'Agregar nueva feature'`)
-4. Push a la rama (`git push origin feature/nueva-feature`)
-5. Abre un Pull Request
-
-## Soporte
-
-Si encuentras algún problema, por favor abre un [issue](https://github.com/gcorroto/mcp-jenkins/issues) en GitHub. 

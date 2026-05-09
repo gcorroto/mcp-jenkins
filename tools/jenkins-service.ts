@@ -17,6 +17,8 @@ import {
   CreatePipelineJobOptions,
   BuildListOptions,
   BuildStartOptions,
+  WaitForBuildOptions,
+  WaitForBuildResult,
   Artifact,
   ConsoleTextResult,
   Build
@@ -473,6 +475,65 @@ export class JenkinsService {
     }
   }
 
+  async waitForBuildCompletion(options: WaitForBuildOptions): Promise<WaitForBuildResult> {
+    this.validateFullName(options.fullName);
+
+    if (!Number.isInteger(options.buildNumber) || options.buildNumber <= 0) {
+      throw new Error('buildNumber must be a positive integer.');
+    }
+
+    const pollIntervalSeconds = this.clampNumber(options.pollIntervalSeconds || 10, 2, 120);
+    const timeoutSeconds = this.clampNumber(options.timeoutSeconds || 1800, pollIntervalSeconds, 86400);
+    const startedAt = Date.now();
+    let pollCount = 0;
+    let latestBuild: Build | undefined;
+
+    while (true) {
+      pollCount += 1;
+      latestBuild = await this.getBuildByFullName(options.fullName, options.buildNumber);
+      const waitedSeconds = Math.round((Date.now() - startedAt) / 1000);
+
+      if (!latestBuild.building) {
+        const result: WaitForBuildResult = {
+          fullName: options.fullName,
+          buildNumber: options.buildNumber,
+          completed: true,
+          timedOut: false,
+          waitedSeconds,
+          pollCount,
+          result: latestBuild.result,
+          build: latestBuild
+        };
+
+        if (options.includeStages) {
+          try {
+            const steps = await this.getBuildStepsByFullName(options.fullName, options.buildNumber);
+            result.stages = steps.stages;
+          } catch {
+            // Some jobs are not Pipeline jobs or do not expose wfapi. The completed build result is still useful.
+          }
+        }
+
+        return result;
+      }
+
+      if (waitedSeconds >= timeoutSeconds) {
+        return {
+          fullName: options.fullName,
+          buildNumber: options.buildNumber,
+          completed: false,
+          timedOut: true,
+          waitedSeconds,
+          pollCount,
+          result: latestBuild.result,
+          build: latestBuild
+        };
+      }
+
+      await this.sleep(pollIntervalSeconds * 1000);
+    }
+  }
+
   async getBuildConsole(fullName: string, buildNumber: number, start?: number, limit?: number): Promise<ConsoleTextResult> {
     this.validateFullName(fullName);
 
@@ -566,6 +627,14 @@ export class JenkinsService {
       .split('/')
       .map(segment => segment.trim())
       .filter(Boolean);
+  }
+
+  private clampNumber(value: number, min: number, max: number): number {
+    return Math.min(Math.max(value, min), max);
+  }
+
+  private sleep(milliseconds: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, milliseconds));
   }
 
   private async getCoverageReportBackend(app: string, buildNumber: number, branch: string = 'main'): Promise<CoverageReport> {

@@ -403,19 +403,21 @@ function errorResponse(error: any) {
 }
 
 const buildParametersSchema = z.record(z.union([z.string(), z.number(), z.boolean()]));
+const optionalText = (description: string) => z.string().optional().default("").describe(description);
+const optionalNumber = (description: string) => z.number().optional().default(0).describe(description);
 
 server.tool(
   "jenkins_job_manager",
   "Gestionar jobs y pipelines de Jenkins: listar, leer, crear, actualizar config, borrar, habilitar, deshabilitar y ramas Git",
   {
     action: z.enum(["list", "get", "get_config", "create_pipeline", "update_config", "delete", "enable", "disable", "get_branches"]).describe("Acción a ejecutar"),
-    fullName: z.string().optional().describe("Ruta completa del job en Jenkins, por ejemplo folder/app/main"),
-    folder: z.string().optional().describe("Folder desde el que listar jobs"),
-    query: z.string().optional().describe("Filtro de texto para nombre o fullName"),
-    limit: z.number().optional().describe("Máximo de resultados a devolver"),
-    configXml: z.string().optional().describe("config.xml completo para crear o actualizar un job"),
-    confirmName: z.string().optional().describe("Confirmación exacta requerida para update_config, delete, enable y disable"),
-    app: z.string().optional().describe("Nombre de la aplicación para get_branches compatible con herramientas existentes")
+    fullName: optionalText("Ruta completa del job en Jenkins, por ejemplo folder/app/main"),
+    folder: optionalText("Folder desde el que listar jobs"),
+    query: optionalText("Filtro de texto para nombre o fullName"),
+    limit: z.number().optional().default(50).describe("Máximo de resultados a devolver"),
+    configXml: optionalText("config.xml completo para crear o actualizar un job"),
+    confirmName: optionalText("Confirmación exacta requerida para update_config, delete, enable y disable"),
+    app: optionalText("Nombre de la aplicación para get_branches compatible con herramientas existentes")
   },
   async (args) => {
     try {
@@ -468,15 +470,18 @@ server.tool(
 
 server.tool(
   "jenkins_build_manager",
-  "Gestionar builds de Jenkins: listar, consultar, iniciar, detener con confirmación, reconstruir, replay, logs y artifacts",
+  "Gestionar builds de Jenkins: listar, consultar, iniciar, esperar, detener con confirmación, reconstruir, replay, logs y artifacts",
   {
-    action: z.enum(["list", "get", "start", "stop", "rebuild", "replay", "console", "artifacts"]).describe("Acción a ejecutar"),
+    action: z.enum(["list", "get", "start", "wait", "stop", "rebuild", "replay", "console", "artifacts"]).describe("Acción a ejecutar"),
     fullName: z.string().describe("Ruta completa del job en Jenkins, por ejemplo folder/app/main"),
-    buildNumber: z.number().optional().describe("Número de build"),
-    limit: z.number().optional().describe("Límite de builds o caracteres de consola"),
-    start: z.number().optional().describe("Offset para logs progresivos"),
+    buildNumber: optionalNumber("Número de build"),
+    limit: optionalNumber("Límite de builds o caracteres de consola"),
+    start: optionalNumber("Offset para logs progresivos"),
+    pollIntervalSeconds: z.number().optional().default(10).describe("Segundos entre consultas al esperar un build"),
+    timeoutSeconds: z.number().optional().default(1800).describe("Timeout máximo al esperar un build"),
+    includeStages: z.boolean().optional().default(false).describe("Incluir stages del pipeline al finalizar"),
     parameters: buildParametersSchema.optional().describe("Parámetros para iniciar buildWithParameters"),
-    confirmBuild: z.number().optional().describe("Confirmación exacta requerida para stop")
+    confirmBuild: optionalNumber("Confirmación exacta requerida para stop")
   },
   async (args) => {
     try {
@@ -487,30 +492,40 @@ server.tool(
           return jsonResponse(await service.listBuilds({ fullName: args.fullName, limit: args.limit }));
 
         case "get":
-          if (args.buildNumber === undefined) throw new Error("buildNumber is required for get action");
+          if (!args.buildNumber) throw new Error("buildNumber is required for get action");
           return jsonResponse(await service.getBuildByFullName(args.fullName, args.buildNumber));
 
         case "start":
           return jsonResponse({ message: await service.startBuild({ fullName: args.fullName, parameters: args.parameters }) });
 
+        case "wait":
+          if (!args.buildNumber) throw new Error("buildNumber is required for wait action");
+          return jsonResponse(await service.waitForBuildCompletion({
+            fullName: args.fullName,
+            buildNumber: args.buildNumber,
+            pollIntervalSeconds: args.pollIntervalSeconds,
+            timeoutSeconds: args.timeoutSeconds,
+            includeStages: args.includeStages
+          }));
+
         case "stop":
-          if (args.buildNumber === undefined) throw new Error("buildNumber is required for stop action");
+          if (!args.buildNumber) throw new Error("buildNumber is required for stop action");
           return jsonResponse({ message: await service.stopBuildByFullName(args.fullName, args.buildNumber, args.confirmBuild) });
 
         case "rebuild":
-          if (args.buildNumber === undefined) throw new Error("buildNumber is required for rebuild action");
+          if (!args.buildNumber) throw new Error("buildNumber is required for rebuild action");
           return jsonResponse({ message: await service.replayBuild(args.fullName, args.buildNumber, "rebuild") });
 
         case "replay":
-          if (args.buildNumber === undefined) throw new Error("buildNumber is required for replay action");
+          if (!args.buildNumber) throw new Error("buildNumber is required for replay action");
           return jsonResponse({ message: await service.replayBuild(args.fullName, args.buildNumber, "replay") });
 
         case "console":
-          if (args.buildNumber === undefined) throw new Error("buildNumber is required for console action");
+          if (!args.buildNumber) throw new Error("buildNumber is required for console action");
           return jsonResponse(await service.getBuildConsole(args.fullName, args.buildNumber, args.start, args.limit));
 
         case "artifacts":
-          if (args.buildNumber === undefined) throw new Error("buildNumber is required for artifacts action");
+          if (!args.buildNumber) throw new Error("buildNumber is required for artifacts action");
           return jsonResponse(await service.listArtifacts(args.fullName, args.buildNumber));
 
         default:
@@ -523,14 +538,39 @@ server.tool(
 );
 
 server.tool(
+  "jenkins_wait_for_build",
+  "Esperar de forma bloqueante a que termine un build de Jenkins antes de continuar con pruebas o verificaciones",
+  {
+    fullName: z.string().describe("Ruta completa del job en Jenkins, por ejemplo folder/app/main"),
+    buildNumber: z.number().describe("Número del build a esperar"),
+    pollIntervalSeconds: z.number().optional().default(10).describe("Segundos entre consultas; mínimo efectivo 2, máximo 120"),
+    timeoutSeconds: z.number().optional().default(1800).describe("Timeout máximo; por defecto 30 minutos, máximo 24 horas"),
+    includeStages: z.boolean().optional().default(true).describe("Incluir stages del pipeline cuando el build termine")
+  },
+  async (args) => {
+    try {
+      return jsonResponse(await getJenkinsService().waitForBuildCompletion({
+        fullName: args.fullName,
+        buildNumber: args.buildNumber,
+        pollIntervalSeconds: args.pollIntervalSeconds,
+        timeoutSeconds: args.timeoutSeconds,
+        includeStages: args.includeStages
+      }));
+    } catch (error: any) {
+      return errorResponse(error);
+    }
+  }
+);
+
+server.tool(
   "jenkins_pipeline_monitor",
   "Monitorear pipelines Jenkins: stages, nodos, inputs pendientes y envío de acciones de input",
   {
     action: z.enum(["steps", "node", "pending_inputs", "submit_input"]).describe("Acción a ejecutar"),
-    fullName: z.string().optional().describe("Ruta completa del job en Jenkins"),
-    buildNumber: z.number().optional().describe("Número de build"),
-    nodeId: z.string().optional().describe("ID del nodo del pipeline"),
-    decisionUrl: z.string().optional().describe("URL proceedUrl o abortUrl devuelta por Jenkins")
+    fullName: optionalText("Ruta completa del job en Jenkins"),
+    buildNumber: optionalNumber("Número de build"),
+    nodeId: optionalText("ID del nodo del pipeline"),
+    decisionUrl: optionalText("URL proceedUrl o abortUrl devuelta por Jenkins")
   },
   async (args) => {
     try {
@@ -538,15 +578,15 @@ server.tool(
 
       switch (args.action) {
         case "steps":
-          if (!args.fullName || args.buildNumber === undefined) throw new Error("fullName and buildNumber are required for steps action");
+          if (!args.fullName || !args.buildNumber) throw new Error("fullName and buildNumber are required for steps action");
           return jsonResponse(await service.getBuildStepsByFullName(args.fullName, args.buildNumber));
 
         case "node":
-          if (!args.fullName || args.buildNumber === undefined || !args.nodeId) throw new Error("fullName, buildNumber and nodeId are required for node action");
+          if (!args.fullName || !args.buildNumber || !args.nodeId) throw new Error("fullName, buildNumber and nodeId are required for node action");
           return jsonResponse(await service.getNodeStatusByFullName(args.fullName, args.buildNumber, args.nodeId));
 
         case "pending_inputs":
-          if (!args.fullName || args.buildNumber === undefined) throw new Error("fullName and buildNumber are required for pending_inputs action");
+          if (!args.fullName || !args.buildNumber) throw new Error("fullName and buildNumber are required for pending_inputs action");
           return jsonResponse(await service.getPendingInputActionsByFullName(args.fullName, args.buildNumber));
 
         case "submit_input":
@@ -612,6 +652,7 @@ async function runServer() {
       "jenkins_get_git_branches",
       "jenkins_job_manager",
       "jenkins_build_manager",
+      "jenkins_wait_for_build",
       "jenkins_pipeline_monitor"
     ]);
 
