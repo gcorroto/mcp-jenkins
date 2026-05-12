@@ -384,7 +384,7 @@ Ejemplos:
 
 ### `jenkins_wait_for_build`
 
-Tool dedicada para agentes que necesitan bloquear el flujo hasta que Jenkins termine un build. La llamada no responde hasta que el build finaliza o se alcanza el timeout.
+Tool dedicada para agentes que necesitan bloquear el flujo hasta que Jenkins termine un build. La llamada responde cuando el build finaliza, cuando se alcanza el timeout o cuando Jenkins entra en una pausa manual (`input`) que requiere aprobacion.
 
 Parametros:
 
@@ -423,6 +423,8 @@ Respuesta esperada:
   "stages": []
 }
 ```
+
+Si Jenkins queda pausado esperando aprobacion manual, la tool devuelve `waitingForInput: true`, el objeto `pendingInput` con `proceedUrl`/`abortUrl` y un `nextStep` con la llamada exacta a `jenkins_submit_input_action`.
 
 Si `timedOut` es `true`, el build seguia corriendo cuando se alcanzo el timeout.
 
@@ -543,7 +545,7 @@ Consulta [JENKINS_REQUIREMENTS.md](./JENKINS_REQUIREMENTS.md) para detalle de pl
 - `console` puede limitar logs con `limit` para evitar respuestas enormes.
 - `artifacts` devuelve metadata y URLs; no descarga binarios por defecto.
 - `coverage` depende mucho de como el job publique sus reportes.
-- `jenkins_wait_for_build` mantiene la llamada abierta hasta fin de build o timeout; ajusta `timeoutSeconds` para builds largos.
+- `jenkins_wait_for_build` mantiene la llamada abierta hasta fin de build, timeout o pausa manual con input pendiente; ajusta `timeoutSeconds` para builds largos.
 
 ## Troubleshooting
 
@@ -594,7 +596,7 @@ Despues lista dentro del multibranch project:
 
 ### `jenkins_wait_for_build` Agota Timeout
 
-El build seguia corriendo. Sube `timeoutSeconds`, revisa logs con `console` o consulta el build con `jenkins_build_manager get`.
+El build seguia corriendo. Sube `timeoutSeconds`, revisa logs con `console` o consulta el build con `jenkins_build_manager get`. Si la respuesta incluye `waitingForInput: true`, aprueba o aborta con `jenkins_submit_input_action` usando la `decisionUrl` devuelta.
 
 ## Desarrollo Local
 

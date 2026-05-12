@@ -539,7 +539,7 @@ server.tool(
 
 server.tool(
   "jenkins_wait_for_build",
-  "Esperar de forma bloqueante a que termine un build de Jenkins antes de continuar con pruebas o verificaciones",
+  "Esperar de forma bloqueante a que termine un build de Jenkins o detectar pausas manuales con input pendiente para poder aprobarlas desde MCP",
   {
     fullName: z.string().describe("Ruta completa del job en Jenkins, por ejemplo folder/app/main"),
     buildNumber: z.number().describe("Número del build a esperar"),

@@ -493,6 +493,34 @@ export class JenkinsService {
       latestBuild = await this.getBuildByFullName(options.fullName, options.buildNumber);
       const waitedSeconds = Math.round((Date.now() - startedAt) / 1000);
 
+      const pendingInput = await this.getPendingInputActionsIfAvailable(options.fullName, options.buildNumber);
+      if (pendingInput) {
+        const result: WaitForBuildResult = {
+          fullName: options.fullName,
+          buildNumber: options.buildNumber,
+          completed: false,
+          timedOut: false,
+          waitingForInput: true,
+          waitedSeconds,
+          pollCount,
+          result: latestBuild.result,
+          build: latestBuild,
+          pendingInput,
+          nextStep: `Build paused waiting for manual input. To approve, call jenkins_submit_input_action with decisionUrl=${pendingInput.proceedUrl}. To abort, use decisionUrl=${pendingInput.abortUrl}.`
+        };
+
+        if (options.includeStages) {
+          try {
+            const steps = await this.getBuildStepsByFullName(options.fullName, options.buildNumber);
+            result.stages = steps.stages;
+          } catch {
+            // Some jobs are not Pipeline jobs or do not expose wfapi. The pending input result is still useful.
+          }
+        }
+
+        return result;
+      }
+
       if (!latestBuild.building) {
         const result: WaitForBuildResult = {
           fullName: options.fullName,
@@ -631,6 +659,23 @@ export class JenkinsService {
 
   private clampNumber(value: number, min: number, max: number): number {
     return Math.min(Math.max(value, min), max);
+  }
+
+  private async getPendingInputActionsIfAvailable(fullName: string, buildNumber: number): Promise<PendingInputAction | undefined> {
+    try {
+      const pendingInput = await this.getPendingInputActionsByFullName(fullName, buildNumber);
+      if (!pendingInput?.proceedUrl || !pendingInput?.abortUrl) {
+        return undefined;
+      }
+
+      return pendingInput;
+    } catch (error: any) {
+      if (error?.status === 404 || error?.response?.status === 404) {
+        return undefined;
+      }
+
+      return undefined;
+    }
   }
 
   private sleep(milliseconds: number): Promise<void> {
