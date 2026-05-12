@@ -10,7 +10,7 @@ describe('JenkinsService.waitForBuildCompletion', () => {
     process.env.JENKINS_USERNAME = 'test-user';
     process.env.JENKINS_PASSWORD = 'test-password';
     service = new JenkinsService();
-    jest.spyOn<any, any>(service as any, 'sleep').mockResolvedValue(undefined);
+    jest.spyOn(service as any, 'sleep').mockResolvedValue(undefined);
   });
 
   it('returns early when the build is paused waiting for manual input', async () => {
