@@ -424,9 +424,9 @@ Respuesta esperada:
 }
 ```
 
-Si Jenkins queda pausado esperando aprobacion manual, la tool devuelve `waitingForInput: true`, el objeto `pendingInput` con `proceedUrl`/`abortUrl` y un `nextStep` con la llamada exacta a `jenkins_submit_input_action`.
+Si Jenkins queda pausado esperando aprobación manual, la tool devuelve `waitingForInput: true`, el objeto `pendingInput` con `proceedUrl`/`abortUrl` y un `nextStep` con la llamada exacta a `jenkins_submit_input_action`.
 
-Si `timedOut` es `true`, el build seguia corriendo cuando se alcanzo el timeout.
+Si `timedOut` es `true`, el build seguía corriendo cuando se alcanzó el timeout.
 
 ### `jenkins_pipeline_monitor`
 
