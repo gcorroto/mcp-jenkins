@@ -29,7 +29,7 @@ describe('JenkinsService.waitForBuildCompletion', () => {
       stageFlowNodes: []
     }];
 
-    jest.spyOn(service, 'getBuildByFullName').mockResolvedValue({
+    const getBuildByFullNameSpy = jest.spyOn(service, 'getBuildByFullName').mockResolvedValue({
       number: 42,
       url: 'https://test-jenkins.com/job/folder/job/app/job/main/42',
       building: true
@@ -58,6 +58,7 @@ describe('JenkinsService.waitForBuildCompletion', () => {
     expect(result.pendingInput).toEqual(pendingInput);
     expect(result.stages).toEqual(stages);
     expect(result.nextStep).toContain('jenkins_submit_input_action');
+    expect(getBuildByFullNameSpy).toHaveBeenCalledTimes(1);
     expect((service as any).sleep).not.toHaveBeenCalled();
   });
 
