@@ -384,7 +384,7 @@ Ejemplos:
 
 ### `jenkins_wait_for_build`
 
-Tool dedicada para agentes que necesitan bloquear el flujo hasta que Jenkins termine un build. La llamada responde cuando el build finaliza, cuando se alcanza el timeout o cuando Jenkins entra en una pausa manual (`input`) que requiere aprobacion.
+Tool dedicada para agentes que necesitan bloquear el flujo hasta que Jenkins termine un build. La llamada responde cuando el build finaliza, cuando se alcanza el timeout o cuando Jenkins entra en una pausa manual (`input`) que requiere aprobación.
 
 Parametros:
 
@@ -596,7 +596,7 @@ Despues lista dentro del multibranch project:
 
 ### `jenkins_wait_for_build` Agota Timeout
 
-El build seguia corriendo. Sube `timeoutSeconds`, revisa logs con `console` o consulta el build con `jenkins_build_manager get`. Si la respuesta incluye `waitingForInput: true`, aprueba o aborta con `jenkins_submit_input_action` usando la `decisionUrl` devuelta.
+El build seguía corriendo. Sube `timeoutSeconds`, revisa logs con `console` o consulta el build con `jenkins_build_manager get`. Si la respuesta incluye `waitingForInput: true`, aprueba o aborta con `jenkins_submit_input_action` usando la `decisionUrl` devuelta.
 
 ## Desarrollo Local
 

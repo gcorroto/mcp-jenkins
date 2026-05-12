@@ -669,11 +669,7 @@ export class JenkinsService {
       }
 
       return pendingInput;
-    } catch (error: any) {
-      if (error?.status === 404 || error?.response?.status === 404) {
-        return undefined;
-      }
-
+    } catch {
       return undefined;
     }
   }
