@@ -88,10 +88,13 @@ export interface WaitForBuildResult {
   buildNumber: number;
   completed: boolean;
   timedOut: boolean;
+  waitingForInput?: boolean;
   waitedSeconds: number;
   pollCount: number;
   result?: string;
   build: Build;
+  pendingInput?: PendingInputAction;
+  nextStep?: string;
   stages?: Stage[];
 }
 
