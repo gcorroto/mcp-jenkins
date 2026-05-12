@@ -63,8 +63,8 @@ describe('JenkinsService.waitForBuildCompletion', () => {
   });
 
   it('ignores missing pending input endpoints and keeps waiting until the build finishes', async () => {
-    const pendingInputMissing = new JenkinsError('pending input endpoint not found');
-    pendingInputMissing.status = 404;
+    const pendingInputNotFoundError = new JenkinsError('pending input endpoint not found');
+    pendingInputNotFoundError.status = 404;
 
     jest.spyOn(service, 'getBuildByFullName')
       .mockResolvedValueOnce({
@@ -78,7 +78,7 @@ describe('JenkinsService.waitForBuildCompletion', () => {
         building: false,
         result: 'SUCCESS'
       });
-    jest.spyOn(service, 'getPendingInputActionsByFullName').mockRejectedValue(pendingInputMissing);
+    jest.spyOn(service, 'getPendingInputActionsByFullName').mockRejectedValue(pendingInputNotFoundError);
 
     const result = await service.waitForBuildCompletion({
       fullName: 'folder/app/main',

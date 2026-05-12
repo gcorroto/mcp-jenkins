@@ -506,7 +506,7 @@ export class JenkinsService {
           result: latestBuild.result,
           build: latestBuild,
           pendingInput,
-          nextStep: `Build paused waiting for manual input. To approve, call jenkins_submit_input_action with decisionUrl=${pendingInput.proceedUrl}. To abort, use decisionUrl=${pendingInput.abortUrl}.`
+          nextStep: `Build paused waiting for manual input. To approve, call jenkins_submit_input_action using pendingInput.proceedUrl as decisionUrl. To abort, use pendingInput.abortUrl as decisionUrl.`
         };
 
         if (options.includeStages) {
