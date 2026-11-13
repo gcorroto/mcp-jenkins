@@ -40,6 +40,16 @@ import {
   sanitizeInput
 } from '../common/utils.js';
 
+const BUILD_FIELDS = 'number,url,building,result,duration,estimatedDuration,timestamp,displayName';
+
+/** Campos del job que usa `getJobStatus`, con los builds resumidos ya resueltos. */
+export const JOB_STATUS_TREE = [
+  'name', 'url', 'buildable', 'color', 'displayName', 'nextBuildNumber',
+  'builds[number,url]',
+  ...['lastBuild', 'lastCompletedBuild', 'lastFailedBuild', 'lastStableBuild',
+    'lastSuccessfulBuild', 'lastUnstableBuild', 'lastUnsuccessfulBuild'].map((name) => `${name}[${BUILD_FIELDS}]`),
+].join(',');
+
 export class JenkinsService {
   private config: JenkinsConfig;
   private client: AxiosInstance;
@@ -63,7 +73,8 @@ export class JenkinsService {
       throw new Error('Invalid app name. Only alphanumeric characters, hyphens and underscores are allowed.');
     }
 
-    const jobUrl = `${buildJobUrl('', app, branch)}/api/json`;
+    // Sin tree, Jenkins omite los detalles de los builds anidados.
+    const jobUrl = `${buildJobUrl('', app, branch)}/api/json?tree=${JOB_STATUS_TREE}`;
 
     try {
       const response: AxiosResponse<JobStatus> = await this.client.get(jobUrl);
