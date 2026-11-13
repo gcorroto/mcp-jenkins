@@ -2,6 +2,15 @@ import https from 'https';
 import { JenkinsConfig, JenkinsError } from './types.js';
 
 /**
+ * Describir el resultado: solo un build marcado como building está en progreso.
+ */
+export function describeBuildResult(build: { building?: boolean; result?: string | null }): string {
+  if (build.building === true) return 'En progreso';
+  if (build.result) return build.result;
+  return build.building === false ? 'Terminado (sin resultado)' : 'Desconocido';
+}
+
+/**
  * Crear configuración de Jenkins desde variables de entorno
  */
 export function createJenkinsConfig(): JenkinsConfig {
@@ -166,4 +175,4 @@ export function validateAppName(app: string): boolean {
  */
 export function sanitizeInput(input: string): string {
   return input.trim().replace(/[<>'"&]/g, '');
-} 
+}

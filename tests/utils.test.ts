@@ -30,3 +30,21 @@ describe('Jenkins fullName utilities', () => {
     expect(() => requireExactConfirmation('folder/app', 'folder/app', 'Deleting Jenkins job')).not.toThrow();
   });
 });
+
+describe('Jenkins build status', () => {
+  it('requests the fields needed for job status', async () => {
+    const { JOB_STATUS_TREE } = await import('../tools/jenkins-service.js');
+    expect(JOB_STATUS_TREE).toContain('lastBuild[number,url,building,result,duration,estimatedDuration,timestamp,displayName]');
+    expect(JOB_STATUS_TREE).toContain('color');
+    expect(JOB_STATUS_TREE).toContain('nextBuildNumber');
+  });
+
+  it('describes running, completed and unknown builds', async () => {
+    const { describeBuildResult } = await import('../common/utils.js');
+    expect(describeBuildResult({ building: true })).toBe('En progreso');
+    expect(describeBuildResult({ building: false, result: 'SUCCESS' })).toBe('SUCCESS');
+    expect(describeBuildResult({ result: 'FAILURE' })).toBe('FAILURE');
+    expect(describeBuildResult({})).toBe('Desconocido');
+    expect(describeBuildResult({ building: false, result: null })).toBe('Terminado (sin resultado)');
+  });
+});

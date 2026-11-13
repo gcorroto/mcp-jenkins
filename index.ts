@@ -6,7 +6,7 @@ import { z } from "zod";
 
 // Import Jenkins service
 import { JenkinsService } from "./tools/jenkins-service.js";
-import { formatDuration, formatTimestamp } from "./common/utils.js";
+import { describeBuildResult, formatDuration, formatTimestamp } from "./common/utils.js";
 import { CoverageSummary } from "./common/types.js";
 
 import { VERSION } from "./common/version.js";
@@ -53,7 +53,7 @@ server.tool(
         `**Próximo build:** #${result.nextBuildNumber}\n\n` +
         (lastBuild ?
           `**Último build:** #${lastBuild.number}\n` +
-          `**Resultado:** ${lastBuild.result || 'En progreso'}\n` +
+          `**Resultado:** ${describeBuildResult(lastBuild)}\n` +
           `**Duración:** ${formatDuration(lastBuild.duration || 0)}\n` +
           `**Timestamp:** ${formatTimestamp(lastBuild.timestamp || 0)}`
           : 'Sin builds previos');
