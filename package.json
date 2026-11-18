@@ -46,11 +46,10 @@
     "pack:dry-run": "npm pack --dry-run",
     "pack:verify": "npm run build && node scripts/verify-package.mjs",
     "smoke:tarball": "node scripts/verify-package.mjs --smoke-tarball",
-    "prerelease": "npm run pack:verify && npm test && npm run smoke:tarball",
-    "release:patch": "npm run version:patch && npm run prerelease && npm publish",
-    "release:minor": "npm run version:minor && npm run prerelease && npm publish",
-    "release:major": "npm run version:major && npm run prerelease && npm publish",
-    "postpublish": "git add package.json && git commit -m \"chore: bump version to v$(node -p \"require('./package.json').version\")\" && git push"
+    "check": "npm run pack:verify && npm test && npm run smoke:tarball",
+    "prerelease": "npm run check",
+    "release:minor": "npm run version:minor && git commit -am \"chore(release): v$(node -p \"require('./package.json').version\")\" && git push",
+    "release:major": "npm run version:major && git commit -am \"chore(release): v$(node -p \"require('./package.json').version\")\" && git push"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.6.1",

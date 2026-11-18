@@ -606,10 +606,15 @@ Esta seccion es solo para quienes quieran modificar el paquete.
 npm install
 npm run build
 npm test
-npm run prerelease
+npm run check
 ```
 
-No publiques una version nueva sin ejecutar `npm run prerelease`.
+## Releasing
+
+Cada push a `main` genera automaticamente una version patch en CI.
+Para una version minor, ejecuta `npm run release:minor`.
+Para una version major, ejecuta `npm run release:major`.
+Solo CI publica versiones en npm.
 
 ## Licencia
 
