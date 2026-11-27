@@ -539,4 +539,8 @@ server.registerTool("jenkins_pipeline_monitor", { description: "Monitorear pipel
   return server;
 }
 
+for (const name of ["JENKINS_URL", "JENKINS_USERNAME", "JENKINS_PASSWORD"]) {
+  if (!process.env[name]) console.error(`Warning: ${name} environment variable not set`);
+}
+console.error("Starting Jenkins MCP Server in stdio mode...");
 serveStdio(() => buildServer());

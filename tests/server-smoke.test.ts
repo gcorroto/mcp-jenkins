@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 
 describe('stdio server', () => {
   it('lists the 15 tools and preserves field descriptions', async () => {
-    execFileSync('npm', ['run', 'build'], { stdio: 'pipe' });
+    execFileSync(process.execPath, ['node_modules/typescript/bin/tsc'], { stdio: 'pipe' });
     const transport = new StdioClientTransport({ command: process.execPath, args: ['dist/index.js'], env: { ...process.env as Record<string, string>, JENKINS_URL: 'http://127.0.0.1:9', JENKINS_USERNAME: 'test', JENKINS_PASSWORD: 'test' } });
     const client = new Client({ name: 'smoke', version: '1.0.0' });
     try {
