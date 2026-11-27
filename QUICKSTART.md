@@ -1,5 +1,9 @@
 # Inicio Rápido - Jenkins MCP
 
+Requiere Node.js 20 o superior.
+
+Para esperar un build, llama a `jenkins_wait_for_build` con `fullName` y `buildNumber`. Cada llamada espera hasta `waitSeconds` (50 segundos por defecto, máximo 300). Mientras devuelva `stillRunning: true`, repite la llamada con los mismos valores; si devuelve `waitingForInput: true`, usa las URLs indicadas para aprobar o abortar.
+
 ## 🚀 Ejecutar con npx (Sin instalación)
 
 ### 1. Configurar variables de entorno

@@ -18,7 +18,7 @@ MCP server para operar Jenkins desde clientes compatibles con Model Context Prot
 
 ### Requisitos
 
-- Node.js 18 o superior.
+- Node.js 20 o superior.
 - URL de Jenkins accesible desde la maquina donde corre el cliente MCP.
 - Usuario de Jenkins con permisos suficientes.
 - API token o password de Jenkins.
@@ -169,14 +169,14 @@ Tool: `jenkins_build_manager`
   "fullName": "Grec0AI_backend_sb/main",
   "buildNumber": 298,
   "pollIntervalSeconds": 10,
-  "timeoutSeconds": 1800,
+  "waitSeconds": 50,
   "includeStages": true
 }
 ```
 
 Tool: `jenkins_wait_for_build`
 
-4. Solo despues de recibir `completed: true`, revisa logs, stages o ejecuta validaciones dependientes del build.
+4. Si devuelve `stillRunning: true`, repite la llamada con los mismos `fullName` y `buildNumber`. Solo despues de recibir `completed: true`, revisa logs, stages o ejecuta validaciones dependientes del build.
 
 ### Revisar Un Fallo
 
@@ -384,7 +384,7 @@ Ejemplos:
 
 ### `jenkins_wait_for_build`
 
-Tool dedicada para agentes que necesitan bloquear el flujo hasta que Jenkins termine un build. La llamada responde cuando el build finaliza, cuando se alcanza el timeout o cuando Jenkins entra en una pausa manual (`input`) que requiere aprobación.
+Espera hasta 50 segundos por llamada, o hasta que el build termine o entre en una pausa manual (`input`). Si devuelve `stillRunning: true`, llama de nuevo con el mismo `fullName` y `buildNumber` hasta recibir `completed: true` o `waitingForInput: true`.
 
 Parametros:
 
@@ -392,8 +392,9 @@ Parametros:
 | --- | --- | --- |
 | `fullName` | Requerido | Ruta del job. |
 | `buildNumber` | Requerido | Numero de build a esperar. |
-| `pollIntervalSeconds` | `10` | Segundos entre consultas. Minimo efectivo: 2. Maximo efectivo: 120. |
-| `timeoutSeconds` | `1800` | Timeout total. Maximo efectivo: 86400. |
+| `pollIntervalSeconds` | `10` | Segundos entre consultas. Mínimo efectivo: 2. Máximo: 60. |
+| `waitSeconds` | `50` | Espera por llamada, entre 0 y 300 segundos. |
+| `timeoutSeconds` | — | Alias obsoleto de `waitSeconds`, limitado a 300 segundos. |
 | `includeStages` | `true` | Incluye stages al terminar si el job expone Pipeline REST API. |
 
 Ejemplo:
@@ -403,7 +404,7 @@ Ejemplo:
   "fullName": "Grec0AI_backend_sb/main",
   "buildNumber": 298,
   "pollIntervalSeconds": 10,
-  "timeoutSeconds": 1800,
+  "waitSeconds": 50,
   "includeStages": true
 }
 ```
@@ -416,8 +417,8 @@ Respuesta esperada:
   "buildNumber": 298,
   "completed": true,
   "timedOut": false,
-  "waitedSeconds": 120,
-  "pollCount": 13,
+  "waitedSeconds": 40,
+  "pollCount": 5,
   "result": "SUCCESS",
   "build": { "number": 298 },
   "stages": []
@@ -545,25 +546,9 @@ Consulta [JENKINS_REQUIREMENTS.md](./JENKINS_REQUIREMENTS.md) para detalle de pl
 - `console` puede limitar logs con `limit` para evitar respuestas enormes.
 - `artifacts` devuelve metadata y URLs; no descarga binarios por defecto.
 - `coverage` depende mucho de como el job publique sus reportes.
-- `jenkins_wait_for_build` mantiene la llamada abierta hasta fin de build, timeout o pausa manual con input pendiente; ajusta `timeoutSeconds` para builds largos.
+- `jenkins_wait_for_build` espera hasta `waitSeconds` y, si devuelve `stillRunning: true`, se llama de nuevo con el mismo job y build. La acción `wait` de `jenkins_build_manager` también limita su espera a 300 segundos.
 
 ## Troubleshooting
-
-### `ERR_MODULE_NOT_FOUND` con `zod-to-json-schema`
-
-Si ves un error parecido a:
-
-```text
-Cannot find module '.../zod-to-json-schema/dist/esm/parsers/record.js'
-```
-
-usa una version reciente del paquete y preferiblemente arranca con `--package`:
-
-```json
-"args": ["-y", "--package", "@grec0/mcp-jenkins@latest", "mcp-jenkins"]
-```
-
-Si `npx` quedo con una instalacion temporal contaminada, borra la carpeta `_npx` que aparece en el stacktrace o limpia el cache de npm.
 
 ### `401` O `403`
 
@@ -596,7 +581,7 @@ Despues lista dentro del multibranch project:
 
 ### `jenkins_wait_for_build` Agota Timeout
 
-El build seguía corriendo. Sube `timeoutSeconds`, revisa logs con `console` o consulta el build con `jenkins_build_manager get`. Si la respuesta incluye `waitingForInput: true`, aprueba o aborta con `jenkins_submit_input_action` usando la `decisionUrl` devuelta.
+Si el build sigue corriendo, repite la llamada con el mismo `fullName` y `buildNumber`; también puedes revisar logs con `console`. Si la respuesta incluye `waitingForInput: true`, aprueba o aborta con `jenkins_submit_input_action` usando la `decisionUrl` devuelta.
 
 ## Desarrollo Local
 

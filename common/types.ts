@@ -80,6 +80,9 @@ export interface WaitForBuildOptions {
   buildNumber: number;
   pollIntervalSeconds?: number;
   timeoutSeconds?: number;
+  waitSeconds?: number;
+  signal?: AbortSignal;
+  onProgress?: (p: { progress: number; message: string }) => void | Promise<void>;
   includeStages?: boolean;
 }
 
@@ -88,6 +91,8 @@ export interface WaitForBuildResult {
   buildNumber: number;
   completed: boolean;
   timedOut: boolean;
+  stillRunning?: boolean;
+  nextPollSeconds?: number;
   waitingForInput?: boolean;
   waitedSeconds: number;
   pollCount: number;

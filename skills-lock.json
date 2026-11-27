@@ -1,11 +1,17 @@
 {
   "version": 1,
   "skills": {
+    "create-mcp-app": {
+      "source": "modelcontextprotocol/ext-apps",
+      "sourceType": "github",
+      "skillPath": "plugins/mcp-apps/skills/create-mcp-app/SKILL.md",
+      "computedHash": "e929dfe91c22ec8078d48dd35f0350d6796c41aa7d597ebb6dff3e8384b2c3eb"
+    },
     "mcp-builder": {
       "source": "anthropics/skills",
       "sourceType": "github",
       "skillPath": "skills/mcp-builder/SKILL.md",
-      "computedHash": "6498a736a8dc5c645047c8a875b8ea7417e2ad97146f005200e50d20a9337ada"
+      "computedHash": "863dfe94bc38b62389884e78fee7f0a9c31bd74a6032f602eb84a66f4b8315c9"
     },
     "nodejs-backend-patterns": {
       "source": "wshobson/agents",
@@ -21,6 +27,12 @@
       "source": "aj-geddes/useful-ai-prompts",
       "sourceType": "autoskills-registry",
       "computedHash": "b15b3e6dda23d3f3c230285a122de9df3aabae6408dc2bd52038445e60ba745e"
+    },
+    "spring-ai-mcp-server-patterns": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-java/skills/spring-ai-mcp-server-patterns/SKILL.md",
+      "computedHash": "791513be92f50bc3a927ab7072b24f0dea8f6281bf6c745d75f2e202334b853a"
     },
     "typescript-advanced-types": {
       "source": "wshobson/agents",
