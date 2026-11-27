@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, unlinkSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -38,8 +37,8 @@ if (packageJson.dependencies?.https) {
   fail('package.json must not depend on the built-in https module');
 }
 
-if (packageJson.dependencies?.['zod-to-json-schema'] !== '3.24.3') {
-  fail('zod-to-json-schema must be pinned to 3.24.3');
+if (packageJson.dependencies?.['@modelcontextprotocol/server'] !== '^2.4.0' || packageJson.dependencies?.zod !== '^4.2.0') {
+  fail('server SDK 2 and zod 4.2 are required');
 }
 
 if (JSON.stringify(packageJson.files) !== JSON.stringify(['dist'])) {
@@ -86,15 +85,15 @@ if (!smokeTarball) {
 
 const pack = parsePackOutput(run('npm', ['pack', '--json']));
 const tarballPath = join(root, pack.filename);
-const tempDir = mkdtempSync(join(tmpdir(), 'mcp-jenkins-smoke-'));
+const tempDir = mkdtempSync(join(root, '.mcp-jenkins-smoke-'));
 
 try {
-  run('npm', ['init', '-y'], tempDir);
+  writeFileSync(join(tempDir, 'package.json'), JSON.stringify({ name: 'mcp-jenkins-smoke', version: '1.0.0', private: true }));
   run('npm', ['install', tarballPath, '--ignore-scripts'], tempDir);
   run('node', [
     '--input-type=module',
     '-e',
-    "import { existsSync } from 'node:fs'; await import('@modelcontextprotocol/sdk/server/mcp.js'); await import('zod-to-json-schema'); if (!existsSync('node_modules/zod-to-json-schema/dist/esm/parsers/record.js')) throw new Error('zod-to-json-schema ESM record parser missing'); console.log('tarball smoke passed');",
+    "await import('@modelcontextprotocol/server'); await import('@modelcontextprotocol/server/stdio'); await import('zod/v4'); console.log('tarball smoke passed');",
   ], tempDir);
   console.log('Tarball smoke verification passed.');
 } finally {

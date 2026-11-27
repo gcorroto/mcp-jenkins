@@ -13,6 +13,39 @@ describe('JenkinsService.waitForBuildCompletion', () => {
     jest.spyOn(service as any, 'sleep').mockResolvedValue(undefined);
   });
 
+  it('returns a resumable running result after a zero-second wait', async () => {
+    jest.spyOn(service, 'getBuildByFullName').mockResolvedValue({ number: 42, building: true });
+    jest.spyOn(service, 'getPendingInputActionsByFullName').mockResolvedValue(null as any);
+    const result = await service.waitForBuildCompletion({ fullName: 'job', buildNumber: 42, waitSeconds: 0, pollIntervalSeconds: 100 });
+    expect(result).toMatchObject({ stillRunning: true, completed: false, timedOut: false, nextPollSeconds: 60 });
+  });
+
+  it('uses and caps the deprecated alias and reports increasing progress', async () => {
+    jest.useFakeTimers();
+    try {
+      const build = jest.spyOn(service, 'getBuildByFullName').mockResolvedValue({ number: 42, building: true });
+      jest.spyOn(service, 'getPendingInputActionsByFullName').mockResolvedValue(null as any);
+      const progress: number[] = [];
+      (service as any).sleep.mockImplementation(async (ms: number) => { jest.advanceTimersByTime(ms); });
+      const result = await service.waitForBuildCompletion({ fullName: 'job', buildNumber: 42, timeoutSeconds: 999, pollIntervalSeconds: 60, onProgress: p => { progress.push(p.progress); } });
+      expect(result.waitedSeconds).toBe(300);
+      expect(build).toHaveBeenCalledTimes(6);
+      expect(progress).toEqual([1, 2, 3, 4, 5, 6]);
+    } finally { jest.useRealTimers(); }
+  });
+
+  it('interrupts sleep on cancellation without another poll', async () => {
+    jest.restoreAllMocks();
+    const build = jest.spyOn(service, 'getBuildByFullName').mockResolvedValue({ number: 42, building: true });
+    jest.spyOn(service, 'getPendingInputActionsByFullName').mockResolvedValue(null as any);
+    const controller = new AbortController();
+    const waiting = service.waitForBuildCompletion({ fullName: 'job', buildNumber: 42, waitSeconds: 50, signal: controller.signal, onProgress: () => { throw new Error('notification failed'); } });
+    await new Promise(resolve => setTimeout(resolve, 20));
+    controller.abort();
+    await expect(waiting).rejects.toThrow();
+    expect(build).toHaveBeenCalledTimes(1);
+  });
+
   it('returns early when the build is paused waiting for manual input', async () => {
     const pendingInput: PendingInputAction = {
       id: 'input-1',

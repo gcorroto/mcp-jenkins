@@ -493,15 +493,21 @@ export class JenkinsService {
       throw new Error('buildNumber must be a positive integer.');
     }
 
-    const pollIntervalSeconds = this.clampNumber(options.pollIntervalSeconds || 10, 2, 120);
-    const timeoutSeconds = this.clampNumber(options.timeoutSeconds || 1800, pollIntervalSeconds, 86400);
+    const pollIntervalSeconds = this.clampNumber(options.pollIntervalSeconds ?? 10, 2, 60);
+    const waitSeconds = this.clampNumber(options.waitSeconds ?? options.timeoutSeconds ?? 50, 0, 300);
     const startedAt = Date.now();
     let pollCount = 0;
     let latestBuild: Build | undefined;
 
     while (true) {
+      options.signal?.throwIfAborted();
       pollCount += 1;
       latestBuild = await this.getBuildByFullName(options.fullName, options.buildNumber);
+      options.signal?.throwIfAborted();
+      try {
+        await options.onProgress?.({ progress: pollCount, message: `Build #${options.buildNumber} en curso · ${Math.floor((Date.now() - startedAt) / 1000)}s` });
+      } catch { /* Progress reporting is best-effort. */ }
+      options.signal?.throwIfAborted();
       const waitedSeconds = Math.round((Date.now() - startedAt) / 1000);
 
       const pendingInput = await this.getPendingInputActionsIfAvailable(options.fullName, options.buildNumber);
@@ -537,6 +543,7 @@ export class JenkinsService {
           fullName: options.fullName,
           buildNumber: options.buildNumber,
           completed: true,
+          stillRunning: false,
           timedOut: false,
           waitedSeconds,
           pollCount,
@@ -556,12 +563,15 @@ export class JenkinsService {
         return result;
       }
 
-      if (waitedSeconds >= timeoutSeconds) {
+      if (Date.now() - startedAt >= waitSeconds * 1000) {
         return {
           fullName: options.fullName,
           buildNumber: options.buildNumber,
           completed: false,
-          timedOut: true,
+          timedOut: false,
+          stillRunning: true,
+          nextPollSeconds: pollIntervalSeconds,
+          nextStep: "Build still running. Call jenkins_wait_for_build again with the same fullName and buildNumber to keep waiting.",
           waitedSeconds,
           pollCount,
           result: latestBuild.result,
@@ -569,7 +579,7 @@ export class JenkinsService {
         };
       }
 
-      await this.sleep(pollIntervalSeconds * 1000);
+      await this.sleep(Math.min(pollIntervalSeconds * 1000, Math.max(0, waitSeconds * 1000 - (Date.now() - startedAt))), options.signal);
     }
   }
 
@@ -685,8 +695,13 @@ export class JenkinsService {
     }
   }
 
-  private sleep(milliseconds: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, milliseconds));
+  private sleep(milliseconds: number, signal?: AbortSignal): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (signal?.aborted) return reject(signal.reason);
+      const timer = setTimeout(() => { signal?.removeEventListener("abort", abort); resolve(); }, milliseconds);
+      const abort = () => { clearTimeout(timer); signal?.removeEventListener("abort", abort); reject(signal?.reason); };
+      signal?.addEventListener("abort", abort, { once: true });
+    });
   }
 
   private async getCoverageReportBackend(app: string, buildNumber: number, branch: string = 'main'): Promise<CoverageReport> {
